@@ -8,27 +8,29 @@ on:
     # Run every day at 0400.
     - cron: '0 04 * * *'
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   nightly:
-    runs-on: ${{ matrix.os }}
-
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest]
-        ghc-ver: [8.10.2]
         include:
           - os: windows-latest
             ghc-ver: 8.10.2.2
+            stack-ver: 2.5.1
+          - os: macos-latest
+            ghc-ver: 8.10.2
+            stack-ver: 2.5.1
 
     env:
-      ARGS: "--stack-yaml stack-${{ matrix.ghc-ver }}.yaml --no-terminal --system-ghc"
+      ARGS: "--stack-yaml=stack-${{ matrix.ghc-ver }}.yaml --no-terminal --system-ghc"
       FLAGS: ""
       EXTRA_ARGS: "--ghc-options=-split-sections"
 
-    defaults:
-      run:
-        shell: bash
+    runs-on: ${{ matrix.os }}
 
     steps:
     - name: Add environment variables for the file name of nightly build
@@ -40,14 +42,35 @@ jobs:
       with:
         submodules: 'recursive'
 
-    - uses: actions/setup-haskell@v1
+    - uses: haskell/actions/setup@v1
       with:
         ghc-version: ${{ matrix.ghc-ver }}
+        enable-stack: true
+        stack-version: ${{ matrix.stack-ver }}
+
+    - uses: actions/cache@v2
+      name: Cache dependencies (Unix-like)
+      id: cache-on-unix
+      if: ${{ runner.os == 'Linux' }}
+      with:
+        path: "~/.stack"
+        # A unique cache is used for each stack.yaml.
+        key: ${{ runner.os }}-stack-nightly-${{ matrix.stack-ver }}-${{ hashFiles(format('stack-{0}.yaml', matrix.ghc-ver)) }}
+
+    - uses: actions/cache@v2
+      name: Cache dependencies (Windows)
+      id: cache-on-win64
+      if: ${{ runner.os == 'Windows' }}
+      with:
+        path: ${{ env.STACK_ROOT }}
+        key: ${{ runner.os }}-stack-nightly-${{ matrix.stack-ver }}-${{ hashFiles(format('stack-{0}.yaml', matrix.ghc-ver)) }}
 
     - name: Update the package index of stack
+      if: ${{ !steps.cache-on-unix.outputs.cache-hit && !steps.cache-on-win64.outputs.cache-hit }}
       run: stack update --silent
 
     - name: Build dependencies
+      if: ${{ !steps.cache-on-unix.outputs.cache-hit && !steps.cache-on-win64.outputs.cache-hit }}
       run: stack build ${ARGS} ${EXTRA_ARGS} ${FLAGS} --only-dependencies --silent
 
     - name: Build Agda (Unix-like)
