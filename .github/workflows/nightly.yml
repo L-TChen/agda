@@ -4,123 +4,184 @@ on:
   push:
     paths:
     - '.github/workflows/nightly.yml'
-  schedule:
-    # Run every day at 0400.
-    - cron: '0 04 * * *'
+  workflow_run:
+    workflows: ["Build, Test, and Benchmark", "Build (cabal)"]
+    branches: [master]
+    types:
+      - completed
 
 defaults:
   run:
     shell: bash
 
 jobs:
+  setup:
+    runs-on: Ubuntu-latest
+    outputs:
+      upload-url: ${{ steps.create-release.outputs.upload_url }}
+    steps:
+    - uses: styfle/cancel-workflow-action@0.6.0
+      with:
+        access_token: ${{ github.token }}
+
+    - name: Generate the short commit SHA
+      id: sha
+      run: |
+        echo ::set-output name=short-sha::${GITHUB_SHA::7}
+
+    - name: Delete the nightly tag if any
+      uses: dev-drprasad/delete-tag-and-release@v0.1.2
+      continue-on-error: true
+      with:
+        delete_release: true
+        tag_name: nightly
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+
+    - name: Create nightly release
+      id: create-release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        tag_name: nightly
+        release_name: Nightly build (${{ steps.sha.outputs.short-sha }})
+        draft: false
+        prerelease: true
+        body: |
+          This experimental version of Agda is built automatically after every sucessful run of all test suites.
+
   nightly:
+    needs: setup
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-latest
             ghc-ver: 8.10.2.2
-            stack-ver: 2.5.1
+            cabal-ver: 3.2
           - os: macos-latest
             ghc-ver: 8.10.2
-            stack-ver: 2.5.1
+            cabal-ver: 3.2
+          - os: ubuntu-latest
+            ghc-ver: 8.10.2
+            cabal-ver: 3.2
 
     env:
-      ARGS: "--stack-yaml=stack-${{ matrix.ghc-ver }}.yaml --no-terminal --system-ghc"
-      FLAGS: ""
-      EXTRA_ARGS: "--ghc-options=-split-sections"
+      ARGS: "-O0 --enable-executable-stripping --enable-library-stripping --disable-library-profiling" # Used by all OS
+      LINUX_ARGS: "--flags=enable-cluster-counting --enable-executable-static --ghc-options=-split-sections"
+      MACOS_ARGS: ""
+      # Liang-Ting (2020-12-8):
+      # GHC fails to compile Agda with the ghc option -split-sections on Windows
+      WIN64_ARGS: ""
 
     runs-on: ${{ matrix.os }}
-
     steps:
-    - name: Add environment variables for the file name of nightly build
+    - name: Determine the build variables
+      id: vars
       run: |
-        short_sha=${GITHUB_SHA::7}
-        echo "nightly_dir=`echo Agda-nightly-${short_sha}-${{ runner.os }}`" >> $GITHUB_ENV
+        nightly=`echo Agda-nightly-${GITHUB_SHA::7}`
+
+        echo ::set-output name=nightly::${nightly}
+
+        if [[ "$OSTYPE" == "msys"* ]]; then
+          echo "::set-output name=args::${ARGS} ${WIN64_ARGS}"
+          filename="${nightly}-win64.zip"
+          echo "::set-output name=filename::${filename}"
+          echo "::set-output name=content-type::application/zip"
+          echo "::set-output name=compress-cmd::7z a ${filename} ${nightly}"
+        elif [[ "$OSTYPE" == "darwin"* ]]; then
+          echo "::set-output name=args::${ARGS} ${MACOS_ARGS}"
+          filename="${nightly}-macOS.tar.xz"
+          echo "::set-output name=filename::${filename}"
+          echo "::set-output name=content-type::application/gzip"
+          echo "::set-output name=compress-cmd::tar -a -cvf ${filename} ${nightly}"
+        elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+          echo "::set-output name=args::${ARGS} ${MACOS_ARGS}"
+          filename="${nightly}-linux.tar.xz"
+          echo "::set-output name=filename::${filename}"
+          echo "::set-output name=content-type::application/gzip"
+          echo "::set-output name=compress-cmd::tar -a -cvf ${filename} ${nightly}"
+          echo "::set-output name=args::${ARGS} ${LINUX_ARGS}"
+        fi
+    - name: Check build variables
+      run: |
+        echo nightly=${{ steps.vars.outputs.nightly }}
+        echo ${{ steps.vars.outputs.compress-cmd }}
+        echo ${{ steps.vars.outputs.filename }}
+        echo ${{ steps.vars.outputs.content-type }}
+        echo ${{ steps.vars.outputs.args }}
 
     - uses: actions/checkout@v2
-      with:
-        submodules: 'recursive'
 
     - uses: haskell/actions/setup@v1
+      id: setup-haskell
       with:
         ghc-version: ${{ matrix.ghc-ver }}
-        enable-stack: true
-        stack-version: ${{ matrix.stack-ver }}
+        cabal-version: ${{ matrix.cabal-ver }}
 
-    - uses: actions/cache@v2
-      name: Cache dependencies (Unix-like)
-      id: cache-on-unix
+    - name: Install the icu library (Ubuntu)
       if: ${{ runner.os == 'Linux' }}
-      with:
-        path: "~/.stack"
-        # A unique cache is used for each stack.yaml.
-        key: ${{ runner.os }}-stack-nightly-${{ matrix.stack-ver }}-${{ hashFiles(format('stack-{0}.yaml', matrix.ghc-ver)) }}
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install libicu-dev -qq
+
+    - name: Configure the build plan
+      run: |
+        cabal configure ${{ steps.vars.outputs.args }}
 
     - uses: actions/cache@v2
-      name: Cache dependencies (Windows)
-      id: cache-on-win64
-      if: ${{ runner.os == 'Windows' }}
+      name: Cache dependencies
+      id: cache
       with:
-        path: ${{ env.STACK_ROOT }}
-        key: ${{ runner.os }}-stack-nightly-${{ matrix.stack-ver }}-${{ hashFiles(format('stack-{0}.yaml', matrix.ghc-ver)) }}
-
-    - name: Update the package index of stack
-      if: ${{ !steps.cache-on-unix.outputs.cache-hit && !steps.cache-on-win64.outputs.cache-hit }}
-      run: stack update --silent
+        path: |
+          ${{ steps.setup-haskell.outputs.cabal-store }}
+        # A unique cache is used for each stack.yaml.
+        key: nightly-${{ runner.os }}-ghc-${{ matrix.ghc-ver }}-cabal-${{ hashFiles('**/plan.json') }}
 
     - name: Build dependencies
-      if: ${{ !steps.cache-on-unix.outputs.cache-hit && !steps.cache-on-win64.outputs.cache-hit }}
-      run: stack build ${ARGS} ${EXTRA_ARGS} ${FLAGS} --only-dependencies --silent
+      if: ${{ !steps.cache.outputs.cache-hit }}
+      run: cabal build exe:agda exe:agda-mode --only-dependencies -v0
 
-    - name: Build Agda (Unix-like)
-      if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
-      run: stack build ${ARGS} ${EXTRA_ARGS} ${FLAGS}
-
-    - name: Build Agda which may fail on the first try (Windows)
+    - name: Build Agda
       uses: nick-invision/retry@v2
-      if: ${{ runner.os == 'Windows' }}
       # Liang-Ting (2020-12-8):
       # Due to a ghc bug on Windows, it is necessary to build Agda twice (or more)
       # See:
       #   - https://github.com/agda/agda/issues/4543
       #   - https://gitlab.haskell.org/ghc/ghc/-/issues/18634
-      #
-      # Liang-Ting (2020-12-8):
-      # It also fails to compile with the ghc option -split-sections on Windows
       with:
         max_attempts: 3
         timeout_minutes: 50
         retry_on: error
-        command: stack build ${{ env.ARGS }} ${{ env.FLAGS }}
+        command: cabal build exe:agda exe:agda-mode
 
     - name: Pack artefacts
       run: |
-        mkdir -p ${{ env.nightly_dir }}
+        mkdir -p ${{ steps.vars.outputs.nightly }}/bin
+        cp -a src/data ${{ steps.vars.outputs.nightly }}
 
-        if [[ "$OSTYPE" == "msys"* ]]
-        then
-          cp -a .github/*.bat ${{ env.nightly_dir }}
+        if [[ "$OSTYPE" == "msys"* ]]; then
+          find dist-newstyle/build -name '*.exe' -type f -exec cp {} ${{ steps.vars.outputs.nightly }}/bin \;
+          cp -a .github/*.bat ${{ steps.vars.outputs.nightly }}
+          C:/ProgramData/Chocolatey/bin/strip.exe ${{ steps.vars.outputs.nightly }}/bin/*
         else
-          cp -a .github/*.sh ${{ env.nightly_dir }}
+          cabal install exe:agda exe:agda-mode \
+            --installdir="${{ steps.vars.outputs.nightly }}/bin" \
+            --install-method=copy
+          cp -a .github/*.sh ${{ steps.vars.outputs.nightly }}
+          strip ${{ steps.vars.outputs.nightly }}/bin/*
         fi
 
-        cp -a src/data ${{ env.nightly_dir }}
-        cp -a $(stack path --local-install-root ${ARGS})/bin ${{ env.nightly_dir }}
+        ${{ steps.vars.outputs.compress-cmd }}
 
-        # Msys2 does not ship strip by default
-        if [[ "$OSTYPE" == "msys"* ]]
-        then
-          stack ${ARGS} exec -- strip ${{ env.nightly_dir }}/bin/*
-        else
-          strip ${{ env.nightly_dir }}/bin/*
-        fi
-
-        tar -cvf ${{ env.nightly_dir }}.tar ${{ env.nightly_dir }}
-
-    - uses: actions/upload-artifact@v2
+    - name: Upload release artifacts
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        path: ${{ env.nightly_dir }}.tar
-        name: ${{ env.nightly_dir }}
-        if-no-files-found: error
-        retention-days: 3
+        upload_url: ${{ needs.setup.outputs.upload-url }}
+        asset_path: ${{ steps.vars.outputs.filename }}
+        asset_name: ${{ steps.vars.outputs.filename }}
+        asset_content_type: ${{ steps.vars.outputs.content-type }}
