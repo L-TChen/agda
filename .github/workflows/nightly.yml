@@ -166,7 +166,7 @@ jobs:
           cp -a .github/*.bat ${{ steps.vars.outputs.nightly }}
           C:/ProgramData/Chocolatey/bin/strip.exe ${{ steps.vars.outputs.nightly }}/bin/*
         else
-          find dist-newstyle/build -type f \( -perm -u=x -o -perm -g=x -o -perm -o=x \) -exec cp {} ${{ steps.vars.outputs.nightly }}/bin \;
+          find dist-newstyle/build \( -name 'agda' -o -name 'agda-mode' \) -type f \( -perm -u=x -o -perm -g=x -o -perm -o=x \) -exec cp {} ${{ steps.vars.outputs.nightly }}/bin \;
           cp -a .github/*.sh ${{ steps.vars.outputs.nightly }}
           strip ${{ steps.vars.outputs.nightly }}/bin/*
         fi
