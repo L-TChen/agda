@@ -69,8 +69,8 @@ jobs:
 
     env:
       ARGS: "-O0 --enable-executable-stripping --enable-library-stripping --disable-library-profiling" # Used by all OS
-      LINUX_ARGS: "--flags=enable-cluster-counting --enable-executable-static --ghc-options=-split-sections"
-      MACOS_ARGS: ""
+      LINUX_ARGS: "--enable-executable-static --ghc-options=-split-sections"
+      MACOS_ARGS: "--flags=enable-cluster-counting"
       # Liang-Ting (2020-12-8):
       # GHC fails to compile Agda with the ghc option -split-sections on Windows
       WIN64_ARGS: ""
@@ -120,11 +120,11 @@ jobs:
         ghc-version: ${{ matrix.ghc-ver }}
         cabal-version: ${{ matrix.cabal-ver }}
 
-    - name: Install the icu library (Ubuntu)
-      if: ${{ runner.os == 'Linux' }}
+    - name: Add the path to icu4c to the cabal configuration
+      if: ${{ runner.os == 'macOS' }}
       run: |
-        sudo apt-get update -qq
-        sudo apt-get install libicu-dev -qq
+        echo "extra-lib-dirs: /usr/local/opt/icu4c/lib">> ~/.cabal/config
+        echo "extra-include-dirs: /usr/local/opt/icu4c/include" >> ~/.cabal/config
 
     - name: Configure the build plan
       run: |
