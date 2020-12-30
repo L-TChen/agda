@@ -166,7 +166,7 @@ jobs:
           cp -a .github/*.bat ${{ steps.vars.outputs.nightly }}
           C:/ProgramData/Chocolatey/bin/strip.exe ${{ steps.vars.outputs.nightly }}/bin/*
         else
-          cabal install exe:agda exe:agda-mode \
+          cabal install exe:agda exe:agda-mode ${{ steps.vars.outputs.args }} \
             --installdir="${{ steps.vars.outputs.nightly }}/bin" \
             --install-method=copy
           cp -a .github/*.sh ${{ steps.vars.outputs.nightly }}
