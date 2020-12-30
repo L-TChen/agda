@@ -166,9 +166,7 @@ jobs:
           cp -a .github/*.bat ${{ steps.vars.outputs.nightly }}
           C:/ProgramData/Chocolatey/bin/strip.exe ${{ steps.vars.outputs.nightly }}/bin/*
         else
-          cabal install exe:agda exe:agda-mode ${{ steps.vars.outputs.args }} \
-            --installdir="${{ steps.vars.outputs.nightly }}/bin" \
-            --install-method=copy
+          find dist-newstyle/build -type f \( -perm -u=x -o -perm -g=x -o -perm -o=x \) -exec cp {} ${{ steps.vars.outputs.nightly }}/bin \;
           cp -a .github/*.sh ${{ steps.vars.outputs.nightly }}
           strip ${{ steps.vars.outputs.nightly }}/bin/*
         fi
