@@ -110,9 +110,9 @@ jobs:
       run: |
         cd ~
         curl -Lo icu4c.zip https://github.com/unicode-org/icu/releases/download/release-67-1/icu4c-67_1-Win64-MSVC2017.zip
-        7z l icu4c.zip
         7z e icu4c.zip -oicu4c
-        ls -R ${APPDATA}/cabal
+        echo "extra-lib-dirs: ${HOME}/icu4c/lib">> ${APPDATA}/cabal/config
+        echo "extra-include-dirs: ${HOME}/icu4c/include" >> ${APPDATA}/cabal/config
 
     - name: Configure the build plan
       run: |
