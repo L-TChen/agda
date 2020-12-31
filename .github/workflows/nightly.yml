@@ -43,14 +43,21 @@ jobs:
       LINUX_ARGS: "--enable-static --enable-executable-static"
       MACOS_ARGS: "--flags=enable-cluster-counting --extra-lib-dirs=/usr/local/opt/icu4c/lib --extra-include-dirs=/usr/local/opt/icu4c/include"
       WIN64_ARGS: ""
-
+    outputs:
+      sha: ${{ steps.vars.outputs.short-sha }}
     runs-on: ${{ matrix.os }}
     steps:
+    - name: Check out the master branch
+      uses: actions/checkout@v2
+      with:
+        repository: 'master'
     - name: Set up platform-dependent variables
       id: vars
       run: |
-        nightly=`echo Agda-nightly-${GITHUB_SHA::7}`
+        short-sha=$(git rev-parse --short=7 HEAD)
+        nightly="Agda-nightly-${short-sha}"
 
+        echo ::set-output name=sha::${short-sha}
         echo ::set-output name=nightly::${nightly}
 
         if [[ "$OSTYPE" == "msys"* ]]; then
@@ -170,4 +177,4 @@ jobs:
         for asset in artifacts/**/*; do
           assets+=("-a" "$asset")
         done
-        hub release create -p "${assets[@]}" -m "Nightly release (${GITHUB_SHA::7})" ${{ env.TAG_NAME }}
+        hub release create -p "${assets[@]}" -m "Nightly release (${{ needs.build.outputs.sha }})" ${{ env.TAG_NAME }}
