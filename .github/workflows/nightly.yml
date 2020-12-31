@@ -39,7 +39,7 @@ jobs:
             cabal-ver: 3.2
 
     env:
-      ARGS: "-O0 --ghc-options=-split-sections --enable-executable-stripping --enable-library-stripping --disable-executable-profiling --disable-library-profiling --disable-debug-info" # Used by all OS
+      ARGS: "-O0 --enable-relocatable --ghc-options=-split-sections --enable-executable-stripping --enable-library-stripping --disable-executable-profiling --disable-library-profiling --disable-debug-info" # Used by all OS
       LINUX_ARGS: "--enable-static --enable-executable-static"
       MACOS_ARGS: "--flags=enable-cluster-counting"
       WIN64_ARGS: ""
@@ -190,4 +190,4 @@ jobs:
           assets+=("-a" "$asset")
         done
         echo ${assets[@]}
-        hub release edit "${assets[@]}" ${{ env.TAG_NAME }}
+        GIT_EDITOR=/bin/nano hub release edit "${assets[@]}" ${{ env.TAG_NAME }}
