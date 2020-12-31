@@ -40,7 +40,7 @@ jobs:
 
     env:
       BRANCH: "master"
-      ARGS: "--ghc-options=-split-sections --enable-executable-stripping --enable-library-stripping --disable-executable-profiling --disable-library-profiling --disable-debug-info"
+      ARGS: "-O0 --ghc-options=-split-sections --enable-executable-stripping --enable-library-stripping --disable-executable-profiling --disable-library-profiling --disable-debug-info"
       LINUX_ARGS: "--enable-static --enable-executable-static"
       MACOS_ARGS: "--flags=enable-cluster-counting"
       WIN64_ARGS: ""
@@ -151,10 +151,17 @@ jobs:
             xattr -rc ${{ steps.vars.outputs.nightly }}/bin
           fi
         fi
+
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+          otool -L ${{ steps.vars.outputs.nightly }}/bin/agda
+        elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+          ldd ${{ steps.vars.outputs.nightly }}/bin/agda
+        fi
     - name: Compress the Agda executable
       uses: svenstaro/upx-action@v2
       with:
         file: ${{ steps.vars.outputs.nightly }}/bin/${{ steps.vars.outputs.exe }}
+        strip: false 
 
     - name: Pack artefacts
       run: |
