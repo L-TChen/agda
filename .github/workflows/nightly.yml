@@ -108,8 +108,8 @@ jobs:
       if: ${{ runner.os == 'Windows' }}
       run: |
         curl -Lo icu4c.zip https://github.com/unicode-org/icu/releases/download/release-67-1/icu4c-67_1-Win64-MSVC2017.zip
-        7z e icu4c.zip
         7z l icu4c.zip
+        7z e icu4c.zip -o icu4c
 
     - name: Configure the build plan
       run: |
@@ -164,7 +164,7 @@ jobs:
       uses: svenstaro/upx-action@v2
       with:
         file: ${{ steps.vars.outputs.nightly }}/bin/${{ steps.vars.outputs.exe }}
-        strip: false 
+        strip: false
 
     - name: Pack artefacts
       run: |
