@@ -46,7 +46,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Determine the build variables
+    - name: Set up platform-dependent variables
       id: vars
       run: |
         nightly=`echo Agda-nightly-${GITHUB_SHA::7}`
@@ -121,7 +121,7 @@ jobs:
       #   - https://gitlab.haskell.org/ghc/ghc/-/issues/18634
       with:
         max_attempts: 3
-        timeout_minutes: 50
+        timeout_minutes: 60
         retry_on: error
         command: cabal build exe:agda exe:agda-mode
 
@@ -140,6 +140,7 @@ jobs:
           strip ${{ steps.vars.outputs.nightly }}/bin/*
         fi
 
+        ${{ steps.vars.outputs.nightly }}/bin/agda --version
         ${{ steps.vars.outputs.compress-cmd }}
 
     - uses: actions/upload-artifact@v2
@@ -151,7 +152,7 @@ jobs:
 
   deploy:
     needs: build
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     env:
       TAG_NAME: nightly
     steps:
@@ -159,6 +160,13 @@ jobs:
     - uses: actions/download-artifact@v2
       with:
         path: artifacts
+    - name: Delete the nightly tag if any
+      uses: dev-drprasad/delete-tag-and-release@v0.1.2
+      with:
+        delete_release: true
+        tag_name: ${{ env.TAG_NAME }}
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
     - name: Create a nightly release and upload artifacts as release assets
       env:
         GITHUB_TOKEN: ${{ github.token }}
@@ -167,6 +175,6 @@ jobs:
         for asset in artifacts/**/*; do
           assets+=("-a" "$asset")
         done
-        hub release delete ${{ env.TAG_NAME }} & hub release create -p "${assets[@]}" \
+        hub release create -p "${assets[@]}" \
           -m "This version of Agda is experimental and automatically built after every sucessful run of all test suites." \
           ${{ env.TAG_NAME }}
