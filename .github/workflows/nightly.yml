@@ -40,7 +40,7 @@ jobs:
 
     env:
       BRANCH: "master"
-      ARGS: "-O0 --ghc-options=-split-sections --enable-executable-stripping --enable-library-stripping --disable-executable-profiling --disable-library-profiling --disable-debug-info"
+      ARGS: "--ghc-options=-split-sections --enable-executable-stripping --enable-library-stripping --disable-executable-profiling --disable-library-profiling --disable-debug-info"
       LINUX_ARGS: "--enable-static --enable-executable-static"
       MACOS_ARGS: "--flags=enable-cluster-counting"
       WIN64_ARGS: ""
