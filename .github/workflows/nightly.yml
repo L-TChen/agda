@@ -50,7 +50,7 @@ jobs:
     - name: Check out the master branch
       uses: actions/checkout@v2
       with:
-        repository: 'master'
+        ref: 'master'
     - name: Set up platform-dependent variables
       id: vars
       run: |
