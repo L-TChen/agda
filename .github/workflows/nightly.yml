@@ -5,8 +5,8 @@ on:
     paths:
     - '.github/workflows/nightly.yml'
   workflow_run:
-    workflows: ["Build, Test, and Benchmark", "Build (cabal)"]
-    branches: [master]
+    workflows: ["Build, Test, and Benchmark", "Build (cabal)", "Whitespace"]
+    branches: [master, nightly-release]
     types:
       - completed
 
