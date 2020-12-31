@@ -39,12 +39,10 @@ jobs:
             cabal-ver: 3.2
 
     env:
-      ARGS: "-O0 --enable-executable-stripping --enable-library-stripping --disable-executable-profiling --disable-library-profiling --disable-debug-info" # Used by all OS
-      LINUX_ARGS: "--ghc-options=-split-sections --enable-static --enable-executable-static"
-      MACOS_ARGS: "--ghc-options=-split-sections --flags=enable-cluster-counting"
-      # Liang-Ting (2020-12-8):
-      # GHC fails to compile Agda with the ghc option -split-sections on Windows
-      WIN64_ARGS: "--ghc-options=-split-sections"
+      ARGS: "-O0 --ghc-options=-split-sections --enable-executable-stripping --enable-library-stripping --disable-executable-profiling --disable-library-profiling --disable-debug-info" # Used by all OS
+      LINUX_ARGS: "--enable-static --enable-executable-static"
+      MACOS_ARGS: "--flags=enable-cluster-counting"
+      WIN64_ARGS: ""
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -144,27 +142,16 @@ jobs:
 
         ${{ steps.vars.outputs.compress-cmd }}
 
-#    - name: Upload release artifacts
-#      id: upload-release-asset
-#      uses: actions/upload-release-asset@v1
-#      env:
-#        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#      with:
-#        upload_url: ${{ needs.setup.outputs.upload-url }}
-#        asset_path: ${{ steps.vars.outputs.filename }}
-#        asset_name: ${{ steps.vars.outputs.filename }}
-#        asset_content_type: ${{ steps.vars.outputs.content-type }}
-#
     - uses: actions/upload-artifact@v2
       with:
         path: ${{ steps.vars.outputs.filename }}
         name: ${{ steps.vars.outputs.filename }}
         if-no-files-found: error
-        retention-days: 1
+        retention-days: 7
 
   deploy:
     needs: build
-    runs-on: Ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       TAG_NAME: nightly
     steps:
@@ -175,7 +162,6 @@ jobs:
 
     - name: Delete the nightly tag if any
       uses: dev-drprasad/delete-tag-and-release@v0.1.2
-      continue-on-error: true
       with:
         delete_release: true
         tag_name: ${{ env.TAG_NAME }}
@@ -193,7 +179,7 @@ jobs:
         draft: false
         prerelease: true
         body: |
-          This experimental version of Agda is built automatically after every sucessful run of all test suites.
+          The nighly version of Agda is built automatically after every sucessful run of all test suites.
 
     - name: Upload artifacts as release assets
       env:
@@ -204,5 +190,4 @@ jobs:
           assets+=("-a" "$asset")
         done
         echo ${assets[@]}
-        GIT_EDITOR=vi
         hub release edit "${assets[@]}" ${{ env.TAG_NAME }}
