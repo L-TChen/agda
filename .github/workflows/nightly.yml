@@ -39,6 +39,7 @@ jobs:
             cabal-ver: 3.2
 
     env:
+      BRANCH: "master"
       ARGS: "-O0 --ghc-options=-split-sections --enable-executable-stripping --enable-library-stripping --disable-executable-profiling --disable-library-profiling --disable-debug-info"
       LINUX_ARGS: "--enable-static --enable-executable-static"
       MACOS_ARGS: "--flags=enable-cluster-counting --extra-lib-dirs=/usr/local/opt/icu4c/lib --extra-include-dirs=/usr/local/opt/icu4c/include"
@@ -50,12 +51,12 @@ jobs:
     - name: Check out the master branch
       uses: actions/checkout@v2
       with:
-        ref: 'master'
+        ref: ${{ env.BRANCH }}
     - name: Set up platform-dependent variables
       id: vars
       run: |
-        short-sha=$(git rev-parse --short=7 HEAD)
-        nightly="Agda-nightly-${short-sha}"
+        short-sha=`echo $(git rev-parse --short=7 HEAD)`
+        nightly=`echo Agda-nightly-${short-sha}`
 
         echo ::set-output name=sha::${short-sha}
         echo ::set-output name=nightly::${nightly}
