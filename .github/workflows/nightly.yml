@@ -73,7 +73,7 @@ jobs:
       MACOS_ARGS: "--flags=enable-cluster-counting --ghc-options=-split-sections"
       # Liang-Ting (2020-12-8):
       # GHC fails to compile Agda with the ghc option -split-sections on Windows
-      WIN64_ARGS: "--ghc-options=-split-sections"
+      WIN64_ARGS: "--ghc-options=-split-sections -O1"
 
     runs-on: ${{ matrix.os }}
     steps:
