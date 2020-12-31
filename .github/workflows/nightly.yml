@@ -167,4 +167,6 @@ jobs:
         for asset in artifacts/**/*; do
           assets+=("-a" "$asset")
         done
-        hub release delete ${{ env.TAG_NAME }} & hub release create "${assets[@]}" -F CHANGELOG.md -p ${{ env.TAG_NAME }}
+        hub release delete ${{ env.TAG_NAME }} & hub release create -p "${assets[@]}" \
+          -m "This version of Agda is experimental and automatically built after every sucessful run of all test suites." \
+          ${{ env.TAG_NAME }}
