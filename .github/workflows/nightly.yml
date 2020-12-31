@@ -140,7 +140,7 @@ jobs:
         cp -a src/data ${{ steps.vars.outputs.nightly }}
 
         if [[ "$OSTYPE" == "msys"* ]]; then
-          find dist-newstyle/build -name '*.exe' -type f -exec cp {} ${{ steps.vars.outputs.nightly }}/bin \;
+          find dist-newstyle/build \( -name 'agda.exe' -o -name 'agda-mode.exe' \) -type f -exec cp {} ${{ steps.vars.outputs.nightly }}/bin \;
           cp -a .github/*.bat ${{ steps.vars.outputs.nightly }}
           C:/ProgramData/Chocolatey/bin/strip.exe ${{ steps.vars.outputs.nightly }}/bin/*
         else
@@ -153,7 +153,6 @@ jobs:
         fi
     - name: Compress the Agda executable
       uses: svenstaro/upx-action@v2
-      if: ${{ runner.os == 'Windows' }}
       with:
         file: ${{ steps.vars.outputs.nightly }}/bin/${{ steps.vars.outputs.exe }}
 
