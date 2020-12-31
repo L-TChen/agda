@@ -15,44 +15,43 @@ defaults:
     shell: bash
 
 jobs:
-  setup:
-    runs-on: Ubuntu-latest
-    outputs:
-      upload-url: ${{ steps.create-release.outputs.upload_url }}
-    steps:
-    - uses: styfle/cancel-workflow-action@0.6.0
-      with:
-        access_token: ${{ github.token }}
+#  setup:
+#    runs-on: Ubuntu-latest
+#    outputs:
+#      upload-url: ${{ steps.create-release.outputs.upload_url }}
+#    steps:
+#    - uses: styfle/cancel-workflow-action@0.6.0
+#      with:
+#        access_token: ${{ github.token }}
 
-    - name: Generate the short commit SHA
-      id: sha
-      run: |
-        echo ::set-output name=short-sha::${GITHUB_SHA::7}
+#    - name: Generate the short commit SHA
+#      id: sha
+#      run: |
+#        echo ::set-output name=short-sha::${GITHUB_SHA::7}
 
-    - name: Delete the nightly tag if any
-      uses: dev-drprasad/delete-tag-and-release@v0.1.2
-      continue-on-error: true
-      with:
-        delete_release: true
-        tag_name: nightly
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-
-    - name: Create nightly release
-      id: create-release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-      with:
-        tag_name: nightly
-        release_name: Nightly build (${{ steps.sha.outputs.short-sha }})
-        draft: false
-        prerelease: true
-        body: |
-          This experimental version of Agda is built automatically after every sucessful run of all test suites.
+#    - name: Delete the nightly tag if any
+#      uses: dev-drprasad/delete-tag-and-release@v0.1.2
+#      continue-on-error: true
+#      with:
+#        delete_release: true
+#        tag_name: nightly
+#      env:
+#        GITHUB_TOKEN: ${{ github.token }}
+#    - name: Create nightly release
+#      id: create-release
+#      uses: actions/create-release@v1
+#      env:
+#        GITHUB_TOKEN: ${{ github.token }}
+#      with:
+#        tag_name: nightly
+#        release_name: Nightly build (${{ steps.sha.outputs.short-sha }})
+#        draft: false
+#        prerelease: true
+#        body: |
+#          This experimental version of Agda is built automatically after every sucessful run of all test suites.
 
   nightly:
-    needs: setup
+#    needs: setup
     strategy:
       fail-fast: false
       matrix:
@@ -73,7 +72,7 @@ jobs:
       MACOS_ARGS: "--flags=enable-cluster-counting --ghc-options=-split-sections"
       # Liang-Ting (2020-12-8):
       # GHC fails to compile Agda with the ghc option -split-sections on Windows
-      WIN64_ARGS: "--ghc-options=-split-sections -O1"
+      WIN64_ARGS: "--ghc-options=-split-sections"
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -183,3 +182,41 @@ jobs:
         asset_path: ${{ steps.vars.outputs.filename }}
         asset_name: ${{ steps.vars.outputs.filename }}
         asset_content_type: ${{ steps.vars.outputs.content-type }}
+
+    - uses: actions/upload-artifact@v2
+      with:
+        path: ${{ steps.vars.outputs.filename }}
+        name: ${{ steps.vars.outputs.filename }}
+        if-no-files-found: error
+        retention-days: 1
+
+  depoly:
+    needs: nightly
+    runs-on: Ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v2
+      with:
+        path: artifacts
+    - name: Create nightly release
+      id: create-release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        tag_name: nightly
+        release_name: Nightly build
+        draft: false
+        prerelease: true
+        body: |
+          This experimental version of Agda is built automatically after every sucessful run of all test suites.
+
+    - name: Upload artifacts as release assets
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        set -x
+        assets=()
+        for asset in artifacts/*; do
+          assets+=("-a" "$asset")
+        done
+        hub release edit "${assets[@]}" nightly
