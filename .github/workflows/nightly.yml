@@ -15,43 +15,15 @@ defaults:
     shell: bash
 
 jobs:
-#  setup:
-#    runs-on: Ubuntu-latest
-#    outputs:
-#      upload-url: ${{ steps.create-release.outputs.upload_url }}
-#    steps:
-#    - uses: styfle/cancel-workflow-action@0.6.0
-#      with:
-#        access_token: ${{ github.token }}
+  auto-cancel:
+    runs-on: Ubuntu-latest
+    steps:
+    - uses: styfle/cancel-workflow-action@0.6.0
+      with:
+        access_token: ${{ github.token }}
 
-#    - name: Generate the short commit SHA
-#      id: sha
-#      run: |
-#        echo ::set-output name=short-sha::${GITHUB_SHA::7}
-
-#    - name: Delete the nightly tag if any
-#      uses: dev-drprasad/delete-tag-and-release@v0.1.2
-#      continue-on-error: true
-#      with:
-#        delete_release: true
-#        tag_name: nightly
-#      env:
-#        GITHUB_TOKEN: ${{ github.token }}
-#    - name: Create nightly release
-#      id: create-release
-#      uses: actions/create-release@v1
-#      env:
-#        GITHUB_TOKEN: ${{ github.token }}
-#      with:
-#        tag_name: nightly
-#        release_name: Nightly build (${{ steps.sha.outputs.short-sha }})
-#        draft: false
-#        prerelease: true
-#        body: |
-#          This experimental version of Agda is built automatically after every sucessful run of all test suites.
-
-  nightly:
-#    needs: setup
+  build:
+    needs: auto-cancel
     strategy:
       fail-fast: false
       matrix:
@@ -190,8 +162,8 @@ jobs:
         if-no-files-found: error
         retention-days: 1
 
-  depoly:
-    needs: nightly
+  deploy:
+    needs: build
     runs-on: Ubuntu-latest
     env:
       TAG_NAME: nightly
@@ -231,4 +203,6 @@ jobs:
         for asset in artifacts/**/*; do
           assets+=("-a" "$asset")
         done
+        echo ${assets[@]}
+        GIT_EDITOR=vi
         hub release edit "${assets[@]}" ${{ env.TAG_NAME }}
