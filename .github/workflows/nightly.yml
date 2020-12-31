@@ -41,7 +41,7 @@ jobs:
     env:
       ARGS: "-O0 --ghc-options=-split-sections --enable-executable-stripping --enable-library-stripping --disable-executable-profiling --disable-library-profiling --disable-debug-info"
       LINUX_ARGS: "--enable-static --enable-executable-static"
-      MACOS_ARGS: "--flags=enable-cluster-counting"
+      MACOS_ARGS: "--flags=enable-cluster-counting --extra-lib-dirs=/usr/local/opt/icu4c/lib --extra-include-dirs=/usr/local/opt/icu4c/include"
       WIN64_ARGS: ""
 
     runs-on: ${{ matrix.os }}
@@ -81,19 +81,11 @@ jobs:
         echo ${{ steps.vars.outputs.content-type }}
         echo ${{ steps.vars.outputs.args }}
 
-    - uses: actions/checkout@v2
-
     - uses: haskell/actions/setup@v1
       id: setup-haskell
       with:
         ghc-version: ${{ matrix.ghc-ver }}
         cabal-version: ${{ matrix.cabal-ver }}
-
-    - name: Add the path to icu4c to the cabal configuration (macOS)
-      if: ${{ runner.os == 'macOS' }}
-      run: |
-        echo "extra-lib-dirs: /usr/local/opt/icu4c/lib">> ~/.cabal/config
-        echo "extra-include-dirs: /usr/local/opt/icu4c/include" >> ~/.cabal/config
 
     - name: Configure the build plan
       run: |
