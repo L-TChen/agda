@@ -58,7 +58,7 @@ jobs:
           filename="${nightly}-win64.zip"
           echo "::set-output name=filename::${filename}"
           echo "::set-output name=content-type::application/zip"
-          echo "::set-output name=compress-cmd::7z a ${filename} ${nightly}"
+          echo "::set-output name=compress-cmd::7z a ${filename} ${nightly} -bb"
         elif [[ "$OSTYPE" == "darwin"* ]]; then
           echo "::set-output name=args::${ARGS} ${MACOS_ARGS}"
           filename="${nightly}-macOS.tar.xz"
@@ -190,4 +190,4 @@ jobs:
           assets+=("-a" "$asset")
         done
         echo ${assets[@]}
-        GIT_EDITOR=/bin/nano hub release edit "${assets[@]}" ${{ env.TAG_NAME }}
+        hub release edit "${assets[@]}" -m "" ${{ env.TAG_NAME }}
