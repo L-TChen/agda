@@ -70,17 +70,17 @@ jobs:
           echo "::set-output name=compress-cmd::7z a ${filename} ${nightly} -bb"
         elif [[ "$OSTYPE" == "darwin"* ]]; then
           echo "::set-output name=args::${ARGS} ${MACOS_ARGS}"
-          filename="${nightly}-macOS.tar.gz"
+          filename="${nightly}-macOS.tar.xz"
           echo ::set-output name=exe::agda
           echo "::set-output name=filename::${filename}"
-          echo "::set-output name=content-type::application/gzip"
+          echo "::set-output name=content-type::application/x-xz"
           echo "::set-output name=compress-cmd::tar -a -cvf ${filename} ${nightly}"
         elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
           echo "::set-output name=args::${ARGS} ${MACOS_ARGS}"
-          filename="${nightly}-linux.tar.gz"
+          filename="${nightly}-linux.tar.xz"
           echo ::set-output name=exe::agda
           echo "::set-output name=filename::${filename}"
-          echo "::set-output name=content-type::application/gzip"
+          echo "::set-output name=content-type::application/x-xz"
           echo "::set-output name=compress-cmd::tar -a -cvf ${filename} ${nightly}"
           echo "::set-output name=args::${ARGS} ${LINUX_ARGS}"
         fi
