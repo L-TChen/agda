@@ -159,7 +159,6 @@ jobs:
     - uses: actions/download-artifact@v2
       with:
         path: artifacts
-
     - name: Delete the nightly tag if any
       uses: dev-drprasad/delete-tag-and-release@v0.1.2
       with:
@@ -167,27 +166,13 @@ jobs:
         tag_name: ${{ env.TAG_NAME }}
       env:
         GITHUB_TOKEN: ${{ github.token }}
-
-    - name: Create nightly release
-      id: create-release
-      uses: actions/create-release@v1
+    - name: Create a nightly release and upload artifacts as release assets
       env:
         GITHUB_TOKEN: ${{ github.token }}
-      with:
-        tag_name: ${{ env.TAG_NAME }}
-        release_name: Nightly build
-        draft: false
-        prerelease: true
-        body: |
-          The nighly version of Agda is built automatically after every sucessful run of all test suites.
-
-    - name: Upload artifacts as release assets
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         assets=()
         for asset in artifacts/**/*; do
           assets+=("-a" "$asset")
         done
         echo ${assets[@]}
-        hub release edit "${assets[@]}" -m "" ${{ env.TAG_NAME }}
+        hub release edit "${assets[@]}" -F CHANGELOG.md -p ${{ env.TAG_NAME }}
