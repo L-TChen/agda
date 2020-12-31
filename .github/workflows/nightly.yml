@@ -70,10 +70,10 @@ jobs:
     env:
       ARGS: "-O0 --enable-executable-stripping --enable-library-stripping --disable-library-profiling" # Used by all OS
       LINUX_ARGS: "--enable-executable-static --ghc-options=-split-sections"
-      MACOS_ARGS: "--flags=enable-cluster-counting  --ghc-options=-split-sections"
+      MACOS_ARGS: "--flags=enable-cluster-counting --ghc-options=-split-sections"
       # Liang-Ting (2020-12-8):
       # GHC fails to compile Agda with the ghc option -split-sections on Windows
-      WIN64_ARGS: " --ghc-options=-split-sections"
+      WIN64_ARGS: "--ghc-options=-split-sections"
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -166,7 +166,7 @@ jobs:
           cp -a .github/*.bat ${{ steps.vars.outputs.nightly }}
           C:/ProgramData/Chocolatey/bin/strip.exe ${{ steps.vars.outputs.nightly }}/bin/*
         else
-          find dist-newstyle/build \( -name 'agda' -o -name 'agda-mode' \) -type f \( -perm -u=x -o -perm -g=x -o -perm -o=x \) -exec cp {} ${{ steps.vars.outputs.nightly }}/bin \;
+          find dist-newstyle/build \( -name 'agda' -o -name 'agda-mode' \) -type f -exec cp {} ${{ steps.vars.outputs.nightly }}/bin \;
           cp -a .github/*.sh ${{ steps.vars.outputs.nightly }}
           strip ${{ steps.vars.outputs.nightly }}/bin/*
         fi
