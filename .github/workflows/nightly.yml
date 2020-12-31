@@ -199,6 +199,16 @@ jobs:
     - uses: actions/download-artifact@v2
       with:
         path: artifacts
+
+    - name: Delete the nightly tag if any
+      uses: dev-drprasad/delete-tag-and-release@v0.1.2
+      continue-on-error: true
+      with:
+        delete_release: true
+        tag_name: ${{ env.TAG_NAME }}
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+
     - name: Create nightly release
       id: create-release
       uses: actions/create-release@v1
@@ -217,7 +227,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         assets=()
-        for asset in artifacts/*; do
+        for asset in artifacts/**/*; do
           assets+=("-a" "$asset")
         done
         hub release edit "${assets[@]}" ${{ env.TAG_NAME }}
