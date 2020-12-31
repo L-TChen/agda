@@ -64,20 +64,23 @@ jobs:
         if [[ "$OSTYPE" == "msys"* ]]; then
           echo "::set-output name=args::${ARGS} ${WIN64_ARGS}"
           filename="${nightly}-win64.zip"
-          echo "::set-output name=filename::${filename}"
-          echo "::set-output name=content-type::application/zip"
+          echo ::set-output name=exe::agda.exe
+          echo ::set-output name=filename::${filename}
+          echo ::set-output name=content-type::application/zip
           echo "::set-output name=compress-cmd::7z a ${filename} ${nightly} -bb"
         elif [[ "$OSTYPE" == "darwin"* ]]; then
           echo "::set-output name=args::${ARGS} ${MACOS_ARGS}"
-          filename="${nightly}-macOS.tar.xz"
+          filename="${nightly}-macOS.tar.gz"
+          echo ::set-output name=exe::agda
           echo "::set-output name=filename::${filename}"
-          echo "::set-output name=content-type::application/x-xz"
+          echo "::set-output name=content-type::application/gzip"
           echo "::set-output name=compress-cmd::tar -a -cvf ${filename} ${nightly}"
         elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
           echo "::set-output name=args::${ARGS} ${MACOS_ARGS}"
-          filename="${nightly}-linux.tar.xz"
+          filename="${nightly}-linux.tar.gz"
+          echo ::set-output name=exe::agda
           echo "::set-output name=filename::${filename}"
-          echo "::set-output name=content-type::application/x-xz"
+          echo "::set-output name=content-type::application/gzip"
           echo "::set-output name=compress-cmd::tar -a -cvf ${filename} ${nightly}"
           echo "::set-output name=args::${ARGS} ${LINUX_ARGS}"
         fi
@@ -131,7 +134,7 @@ jobs:
         retry_on: error
         command: cabal build exe:agda exe:agda-mode
 
-    - name: Pack artefacts
+    - name: Move artefacts to ${{ steps.vars.outputs.nightly }}
       run: |
         mkdir -p ${{ steps.vars.outputs.nightly }}/bin
         cp -a src/data ${{ steps.vars.outputs.nightly }}
@@ -148,7 +151,14 @@ jobs:
             xattr -rc ${{ steps.vars.outputs.nightly }}/bin
           fi
         fi
+    - name: Compress the Agda executable
+      uses: svenstaro/upx-action@v2
+      if: ${{ runner.os == 'Windows' }}
+      with:
+        file: ${{ steps.vars.outputs.nightly }}/bin/${{ steps.vars.outputs.exe }}
 
+    - name: Pack artefacts
+      run: |
         ${{ steps.vars.outputs.nightly }}/bin/agda --version
         ${{ steps.vars.outputs.compress-cmd }}
 
