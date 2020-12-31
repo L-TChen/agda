@@ -39,7 +39,7 @@ jobs:
             cabal-ver: 3.2
 
     env:
-      ARGS: "--ghc-options=-split-sections --enable-executable-stripping --enable-library-stripping --disable-executable-profiling --disable-library-profiling --disable-debug-info" # Used by all OS
+      ARGS: "-O0 --ghc-options=-split-sections --enable-executable-stripping --enable-library-stripping --disable-executable-profiling --disable-library-profiling --disable-debug-info"
       LINUX_ARGS: "--enable-static --enable-executable-static"
       MACOS_ARGS: "--flags=enable-cluster-counting"
       WIN64_ARGS: ""
@@ -138,6 +138,9 @@ jobs:
           find dist-newstyle/build \( -name 'agda' -o -name 'agda-mode' \) -type f -exec cp {} ${{ steps.vars.outputs.nightly }}/bin \;
           cp -a .github/*.sh ${{ steps.vars.outputs.nightly }}
           strip ${{ steps.vars.outputs.nightly }}/bin/*
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            xattr -rc ${{ steps.vars.outputs.nightly }}/bin
+          fi
         fi
 
         ${{ steps.vars.outputs.nightly }}/bin/agda --version
