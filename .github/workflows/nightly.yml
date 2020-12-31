@@ -105,7 +105,7 @@ jobs:
         echo "extra-include-dirs: /usr/local/opt/icu4c/include" >> ~/.cabal/config
 
     - name: Install text-icu
-      run: }
+      run: |
         cabal install text-icu
 
     - name: Configure the build plan
