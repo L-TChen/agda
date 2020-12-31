@@ -39,7 +39,7 @@ jobs:
             cabal-ver: 3.2
 
     env:
-      ARGS: "-O0 --enable-relocatable --ghc-options=-split-sections --enable-executable-stripping --enable-library-stripping --disable-executable-profiling --disable-library-profiling --disable-debug-info" # Used by all OS
+      ARGS: "-O0 --ghc-options=-split-sections --enable-executable-stripping --enable-library-stripping --disable-executable-profiling --disable-library-profiling --disable-debug-info" # Used by all OS
       LINUX_ARGS: "--enable-static --enable-executable-static"
       MACOS_ARGS: "--flags=enable-cluster-counting"
       WIN64_ARGS: ""
@@ -73,7 +73,7 @@ jobs:
           echo "::set-output name=compress-cmd::tar -a -cvf ${filename} ${nightly}"
           echo "::set-output name=args::${ARGS} ${LINUX_ARGS}"
         fi
-    - name: Check build variables
+    - name: Display build variables
       run: |
         echo nightly=${{ steps.vars.outputs.nightly }}
         echo ${{ steps.vars.outputs.compress-cmd }}
@@ -159,13 +159,6 @@ jobs:
     - uses: actions/download-artifact@v2
       with:
         path: artifacts
-    - name: Delete the nightly tag if any
-      uses: dev-drprasad/delete-tag-and-release@v0.1.2
-      with:
-        delete_release: true
-        tag_name: ${{ env.TAG_NAME }}
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
     - name: Create a nightly release and upload artifacts as release assets
       env:
         GITHUB_TOKEN: ${{ github.token }}
@@ -174,5 +167,4 @@ jobs:
         for asset in artifacts/**/*; do
           assets+=("-a" "$asset")
         done
-        echo ${assets[@]}
-        hub release edit "${assets[@]}" -F CHANGELOG.md -p ${{ env.TAG_NAME }}
+        hub release delete ${{ env.TAG_NAME }} & hub release create "${assets[@]}" -F CHANGELOG.md -p ${{ env.TAG_NAME }}
