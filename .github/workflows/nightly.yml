@@ -40,7 +40,7 @@ jobs:
 
     env:
       BRANCH: "master"
-      ARGS: "-O0 --ghc-options=-split-sections --enable-executable-stripping --enable-library-stripping --disable-executable-profiling --disable-library-profiling --disable-debug-info"
+      ARGS: "-O0 --ghc-options=-split-sections --enable-library-stripping --disable-executable-profiling --disable-library-profiling"
       # Liang-Ting Chen (2021-01-01):
       # Compiling statically with icu4c does not work, see https://github.com/4e6/text-icu-static-example
       LINUX_ARGS: "--enable-static --enable-executable-static"
@@ -69,7 +69,7 @@ jobs:
           echo ::set-output name=exe::agda.exe
           echo ::set-output name=filename::${filename}
           echo ::set-output name=content-type::application/zip
-          echo "::set-output name=compress-cmd::7z a ${filename} ${nightly} -bb"
+          echo "::set-output name=compress-cmd::7z a ${filename} ${nightly} -bb -mx=9"
         elif [[ "$OSTYPE" == "darwin"* ]]; then
           echo "::set-output name=args::${ARGS} ${MACOS_ARGS}"
           filename="${nightly}-macOS.tar.xz"
@@ -165,12 +165,11 @@ jobs:
           cp -a .github/*.sh ${{ steps.vars.outputs.nightly }}
           strip ${{ steps.vars.outputs.nightly }}/bin/*
           if [[ "$OSTYPE" == "darwin"* ]]; then
-            cp /usr/local/opt/icu4c/lib/libicuuc.67.dylib /usr/local/opt/icu4c/lib/libicui18n.67.dylib /usr/local/opt/icu4c/lib/libicudata.67.dylib ${{ steps.vars.outputs.nightly }}/bin
-
+            mkdir ${{ steps.vars.outputs.nightly }}/lib
+            # cp /usr/local/opt/icu4c/lib/libicuuc.67.dylib /usr/local/opt/icu4c/lib/libicui18n.67.dylib /usr/local/opt/icu4c/lib/libicudata.67.dylib ${{ steps.vars.outputs.nightly }}/lib
             install_name_tool -change /usr/local/opt/icu4c/lib/libicuuc.67.dylib @rpath/libicuuc.67.dylib ${{ steps.vars.outputs.nightly }}/bin/agda
             install_name_tool -change /usr/local/opt/icu4c/lib/libicui18n.67.dylib @rpath/libicui18n.67.dylib ${{ steps.vars.outputs.nightly }}/bin/agda
-            install_name_tool -add_rpath @executable_path -add_rpath @executable_path/../dylib -add_rpath /usr/local/opt/icu4c/lib ${{ steps.vars.outputs.nightly }}/bin/agda
-            otool -L ${{ steps.vars.outputs.nightly }}/bin/agda
+            install_name_tool -add_rpath @executable_path -add_rpath @executable_path/../lib -add_rpath /usr/local/opt/icu4c/lib ${{ steps.vars.outputs.nightly }}/bin/agda
           fi
         fi
 
