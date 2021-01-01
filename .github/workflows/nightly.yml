@@ -40,10 +40,10 @@ jobs:
 
     env:
       BRANCH: "master"
-      ARGS: "-O0 --flags=enable-cluster-counting --ghc-options=-split-sections --enable-executable-stripping --enable-library-stripping --disable-executable-profiling --disable-library-profiling --disable-debug-info"
+      ARGS: "-O0 --ghc-options=-split-sections --enable-executable-stripping --enable-library-stripping --disable-executable-profiling --disable-library-profiling --disable-debug-info"
       LINUX_ARGS: "--enable-static --enable-executable-static"
-      MACOS_ARGS: ""
-      WIN64_ARGS: ""
+      MACOS_ARGS: "--flags=enable-cluster-counting"
+      WIN64_ARGS: "--flags=enable-cluster-counting"
     outputs:
       sha: ${{ steps.vars.outputs.sha }}
     runs-on: ${{ matrix.os }}
@@ -131,7 +131,7 @@ jobs:
 
     - name: Build dependencies
       if: ${{ !steps.cache.outputs.cache-hit }}
-      run: cabal build exe:agda exe:agda-mode --only-dependencies -v0
+      run: cabal build exe:agda exe:agda-mode --only-dependencies
 
     - name: Build Agda
       uses: nick-invision/retry@v2
