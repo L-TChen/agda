@@ -111,6 +111,7 @@ jobs:
         7z e icu4c.zip -o/c/icu4c
 
         mkdir -p /c/icu4c/include/unicode
+        mv /c/icu4c/*.h /c/icu4c/include/unicode
 
         echo "extra-lib-dirs: C:\icu4c">> ${APPDATA}/cabal/config
         echo "extra-include-dirs: C:\icu4c\inlucde" >> ${APPDATA}/cabal/config
@@ -118,6 +119,7 @@ jobs:
         ls -R /c/icu4c
 
         cabal install text-icu --lib
+        cygpath -w /c/icu4c/include
 
     - name: Configure the build plan
       run: |
