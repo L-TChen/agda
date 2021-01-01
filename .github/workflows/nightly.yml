@@ -29,15 +29,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        os: [macos-latest, ubuntu-latest]
+        ghc-ver: [8.10.2]
+        cabal-ver: [3.2]
         include:
           - os: windows-latest
             ghc-ver: 8.10.2.2
-            cabal-ver: 3.2
-          - os: macos-latest
-            ghc-ver: 8.10.2
-            cabal-ver: 3.2
-          - os: ubuntu-latest
-            ghc-ver: 8.10.2
             cabal-ver: 3.2
 
     env:
@@ -155,6 +152,7 @@ jobs:
 
     - name: Move artefacts to ${{ steps.vars.outputs.nightly }}
       run: |
+        # TODO: Move this part to Makefile
         mkdir -p ${{ steps.vars.outputs.nightly }}/bin
         cp -a src/data ${{ steps.vars.outputs.nightly }}
 
@@ -173,6 +171,7 @@ jobs:
             install_name_tool -change /usr/local/opt/icu4c/lib/libicuuc.67.dylib @rpath/libicuuc.67.dylib ${{ steps.vars.outputs.nightly }}/bin/agda
             install_name_tool -change /usr/local/opt/icu4c/lib/libicui18n.67.dylib @rpath/libicui18n.67.dylib ${{ steps.vars.outputs.nightly }}/bin/agda
             install_name_tool -add_rpath @executable_path -add_rpath @executable_path/../lib -add_rpath /usr/local/opt/icu4c/lib ${{ steps.vars.outputs.nightly }}/bin/agda
+            otool -l ${{ steps.vars.outputs.nightly }}/bin/agda
           fi
         fi
 
