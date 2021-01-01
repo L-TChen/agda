@@ -13,6 +13,9 @@ on:
 defaults:
   run:
     shell: bash
+env:
+  BRANCH: "master"
+  RELEASE: false 
 
 jobs:
   auto-cancel:
@@ -195,6 +198,7 @@ jobs:
 
   deploy:
     needs: build
+    if: ${{ env.RELEASE }}
     runs-on: ubuntu-latest
     env:
       TAG_NAME: nightly
@@ -218,4 +222,4 @@ jobs:
         for asset in artifacts/**/*; do
           assets+=("-a" "$asset")
         done
-        hub release create "${assets[@]}" -m "Nightly release (${{ needs.build.outputs.sha }})" ${{ env.TAG_NAME }}
+        hub release create "${assets[@]}" -m "Nightly build (${{ needs.build.outputs.sha }}@${{ env.BRANCH }})" ${{ env.TAG_NAME }}
