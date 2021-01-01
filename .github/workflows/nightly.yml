@@ -113,9 +113,10 @@ jobs:
       run: |
         curl -Lo icu4c.zip https://github.com/unicode-org/icu/releases/download/release-67-1/icu4c-67_1-Win64-MSVC2017.zip
         7z e icu4c.zip -o${ICU_DIR}
+
+        cygpath -w ${ICU_DIR}
         mkdir -p ${ICU_DIR}/include/unicode
 
-        mv ${ICU_DIR}/*.h ${ICU_DIR}/include/unicode
         echo "extra-lib-dirs: ${ICU_DIR_WIN}">> ${APPDATA}/cabal/config
         echo "extra-include-dirs: ${ICU_DIR_WIN}\inlucde" >> ${APPDATA}/cabal/config
         ls -R ${ICU_DIR}
