@@ -104,7 +104,7 @@ jobs:
         echo "extra-lib-dirs: /usr/local/opt/icu4c/lib">> ~/.cabal/config
         echo "extra-include-dirs: /usr/local/opt/icu4c/include" >> ~/.cabal/config
 
-    - name: Install the ic4u library (Windows)
+    - name: Install the icu4u library (Windows)
       if: ${{ runner.os == 'Windows' }}
       working-directory: /c/
       run: |
@@ -117,6 +117,11 @@ jobs:
         echo "extra-lib-dirs: c:\icu4c">> ${APPDATA}/cabal/config
         echo "extra-include-dirs: c:\icu4c\inlucde" >> ${APPDATA}/cabal/config
         ls -R /c/icu4c
+
+        cabal install text-icu --lib
+    - name: Install the text-icu package
+      run: |
+        cabal install text-icu --lib
 
     - name: Configure the build plan
       run: |
