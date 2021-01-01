@@ -40,10 +40,12 @@ jobs:
 
     env:
       BRANCH: "master"
-      ARGS: "-O0 --ghc-options=-split-sections --enable-executable-stripping --enable-library-stripping --disable-executable-profiling --disable-library-profiling --disable-debug-info"
-      LINUX_ARGS: "--enable-static --enable-executable-static"
-      MACOS_ARGS: "--flags=enable-cluster-counting"
-      WIN64_ARGS: "--flags=enable-cluster-counting"
+      ARGS: "---ghc-options=-split-sections --enable-executable-stripping --enable-library-stripping --disable-executable-profiling --disable-library-profiling --disable-debug-info"
+      # Liang-Ting Chen (2021-01-01): 
+      # Compiling statically with icu4c does not work, see https://github.com/4e6/text-icu-static-example
+      LINUX_ARGS: "-O0 --enable-static --enable-executable-static" 
+      MACOS_ARGS: "-O0 --flags=enable-cluster-counting"
+      WIN64_ARGS: "-O0 --flags=enable-cluster-counting"
     outputs:
       sha: ${{ steps.vars.outputs.sha }}
     runs-on: ${{ matrix.os }}
@@ -157,21 +159,14 @@ jobs:
           find dist-newstyle/build \( -name 'agda.exe' -o -name 'agda-mode.exe' \) -type f -exec cp {} ${{ steps.vars.outputs.nightly }}/bin \;
           cp -a .github/*.bat ${{ steps.vars.outputs.nightly }}
           C:/ProgramData/Chocolatey/bin/strip.exe ${{ steps.vars.outputs.nightly }}/bin/*
-          cp /c/icu4c/*.dll ${{ steps.vars.outputs.nightly }}/bin
+          cp /c/icu4c/icu*.dll ${{ steps.vars.outputs.nightly }}/bin
         else
           find dist-newstyle/build \( -name 'agda' -o -name 'agda-mode' \) -type f -exec cp {} ${{ steps.vars.outputs.nightly }}/bin \;
           cp -a .github/*.sh ${{ steps.vars.outputs.nightly }}
           strip ${{ steps.vars.outputs.nightly }}/bin/*
           if [[ "$OSTYPE" == "darwin"* ]]; then
-            otool -L ${{ steps.vars.outputs.nightly }}/bin/agda
-            
             mkdir ${{ steps.vars.outputs.nightly }}/dylib
             cp /usr/local/opt/icu4c/lib/libicuuc.67.dylib /usr/local/opt/icu4c/lib/libicui18n.67.dylib ${{ steps.vars.outputs.nightly }}/dylib
-            
-            install_name_tool -change /usr/local/opt/icu4c/lib/libicuuc.67.dylib ../dylib/libicuuc.67.dylib ${{ steps.vars.outputs.nightly }}/bin/agda
-            install_name_tool -change /usr/local/opt/icu4c/lib/libicui18n.67.dylib ../dylib/libicui18n.67.dylib ${{ steps.vars.outputs.nightly }}/bin/agda
-            
-            otool -L ${{ steps.vars.outputs.nightly }}/bin/agda
           fi
         fi
 
