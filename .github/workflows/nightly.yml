@@ -1,5 +1,8 @@
 name: Build (nightly)
 
+env:
+  BRANCH: 'master'
+  TAG_NAME: 'nightly'
 on:
   push:
     paths:
@@ -9,13 +12,9 @@ on:
     branches: [master]
     types:
       - completed
-
 defaults:
   run:
     shell: bash
-env:
-  BRANCH: 'master'
-
 jobs:
   auto-cancel:
     runs-on: Ubuntu-latest
@@ -23,7 +22,6 @@ jobs:
     - uses: styfle/cancel-workflow-action@0.6.0
       with:
         access_token: ${{ github.token }}
-
   build:
     needs: auto-cancel
     strategy:
@@ -38,7 +36,7 @@ jobs:
             cabal-ver: 3.2
 
     env:
-      ARGS: "-O0 --enable-library-stripping --disable-executable-profiling --disable-library-profiling"
+      ARGS: "--enable-library-stripping --disable-executable-profiling --disable-library-profiling"
       # Liang-Ting Chen (2021-01-01):
       # Compiling statically with icu4c does not work, see https://github.com/4e6/text-icu-static-example
       LINUX_ARGS: "--ghc-options=-split-sections --enable-static --enable-executable-static"
@@ -174,30 +172,24 @@ jobs:
             otool -l ${{ steps.vars.outputs.nightly }}/bin/agda
           fi
         fi
-
     - name: Compress the Agda executable
       uses: svenstaro/upx-action@v2
       with:
         file: ${{ steps.vars.outputs.nightly }}/bin/${{ steps.vars.outputs.exe }}
         strip: false
-
     - name: Pack artefacts
       run: |
         ${{ steps.vars.outputs.nightly }}/bin/agda --version
         ${{ steps.vars.outputs.compress-cmd }}
-
     - uses: actions/upload-artifact@v2
       with:
         path: ${{ steps.vars.outputs.filename }}
         name: ${{ steps.vars.outputs.filename }}
         if-no-files-found: error
         retention-days: 7
-
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    env:
-      TAG_NAME: nightly
     steps:
     - uses: actions/checkout@v2
     - uses: actions/download-artifact@v2
