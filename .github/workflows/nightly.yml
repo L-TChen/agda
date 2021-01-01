@@ -165,13 +165,11 @@ jobs:
           cp -a .github/*.sh ${{ steps.vars.outputs.nightly }}
           strip ${{ steps.vars.outputs.nightly }}/bin/*
           if [[ "$OSTYPE" == "darwin"* ]]; then
-            cp /usr/local/opt/icu4c/lib/libicuuc.67.dylib /usr/local/opt/icu4c/lib/libicui18n.67.dylib ${{ steps.vars.outputs.nightly }}/bin
+            cp /usr/local/opt/icu4c/lib/libicuuc.67.dylib /usr/local/opt/icu4c/lib/libicui18n.67.dylib /usr/local/opt/icu4c/lib/libicudata.67.dylib ${{ steps.vars.outputs.nightly }}/bin
 
-            install_name_tool -id @rpath/libicui18n.67.dylib ${{ steps.vars.outputs.nightly }}/bin/libicui18n.67.dylib
-            install_name_tool -id @rpath/libicuuc.67.dylib ${{ steps.vars.outputs.nightly }}/bin/libicuuc.67.dylib
             install_name_tool -change /usr/local/opt/icu4c/lib/libicuuc.67.dylib @rpath/libicuuc.67.dylib ${{ steps.vars.outputs.nightly }}/bin/agda
             install_name_tool -change /usr/local/opt/icu4c/lib/libicui18n.67.dylib @rpath/libicui18n.67.dylib ${{ steps.vars.outputs.nightly }}/bin/agda
-            install_name_tool -add_rpath @executable_path -add_rpath /usr/local/opt/icu4c/lib ${{ steps.vars.outputs.nightly }}/bin/agda
+            install_name_tool -add_rpath @executable_path -add_rpath @executable_path/../dylib -add_rpath /usr/local/opt/icu4c/lib ${{ steps.vars.outputs.nightly }}/bin/agda
             otool -L ${{ steps.vars.outputs.nightly }}/bin/agda
           fi
         fi
