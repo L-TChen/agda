@@ -14,8 +14,7 @@ defaults:
   run:
     shell: bash
 env:
-  BRANCH: "master"
-  RELEASE: false 
+  BRANCH: 'master'
 
 jobs:
   auto-cancel:
@@ -42,8 +41,7 @@ jobs:
             cabal-ver: 3.2
 
     env:
-      BRANCH: "master"
-      ARGS: "--enable-library-stripping --disable-executable-profiling --disable-library-profiling"
+      ARGS: "-O0 --enable-library-stripping --disable-executable-profiling --disable-library-profiling"
       # Liang-Ting Chen (2021-01-01):
       # Compiling statically with icu4c does not work, see https://github.com/4e6/text-icu-static-example
       LINUX_ARGS: "--ghc-options=-split-sections --enable-static --enable-executable-static"
@@ -198,7 +196,6 @@ jobs:
 
   deploy:
     needs: build
-    if: ${{ env.RELEASE }}
     runs-on: ubuntu-latest
     env:
       TAG_NAME: nightly
