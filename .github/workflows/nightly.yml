@@ -103,18 +103,19 @@ jobs:
       run: |
         echo "extra-lib-dirs: /usr/local/opt/icu4c/lib">> ~/.cabal/config
         echo "extra-include-dirs: /usr/local/opt/icu4c/include" >> ~/.cabal/config
-        ls -R /usr/local/opt/icu4c/lib
-        ls -R /usr/local/opt/icu4c/include
 
     - name: Install the ic4u library (Windows)
       if: ${{ runner.os == 'Windows' }}
+      working-directory: /c/
       run: |
-        cd /c/
-        curl -Lo icu4c-67.zip https://github.com/unicode-org/icu/releases/download/release-67-1/icu4c-67_1-Win64-MSVC2017.zip
-        7z e icu4c-67.zip -oicu4c-67
-        echo "extra-lib-dirs: c:\icu4c-67">> ${APPDATA}/cabal/config
-        echo "extra-include-dirs: c:\icu4c-67" >> ${APPDATA}/cabal/config
-        ls -R /c/icu4c-67
+        curl -Lo icu4c.zip https://github.com/unicode-org/icu/releases/download/release-67-1/icu4c-67_1-Win64-MSVC2017.zip
+        7z e icu4c.zip -oicu4c
+        mkdir -p icu4c/include/unicode
+
+        mv icu4c/*.h icu4c/include/unicode
+        echo "extra-lib-dirs: c:\icu4c">> ${APPDATA}/cabal/config
+        echo "extra-include-dirs: c:\icu4c\inlucde" >> ${APPDATA}/cabal/config
+        ls -R /c/icu4c
 
     - name: Configure the build plan
       run: |
