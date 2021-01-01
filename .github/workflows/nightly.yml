@@ -92,12 +92,12 @@ jobs:
         echo ${{ steps.vars.outputs.content-type }}
         echo ${{ steps.vars.outputs.args }}
 
-#    - uses: haskell/actions/setup@v1
-#      id: setup-haskell
-#      with:
-#        ghc-version: ${{ matrix.ghc-ver }}
-#        cabal-version: ${{ matrix.cabal-ver }}
-#
+    - uses: haskell/actions/setup@v1
+      id: setup-haskell
+      with:
+        ghc-version: ${{ matrix.ghc-ver }}
+        cabal-version: ${{ matrix.cabal-ver }}
+
     - name: Add the path to icu4c to the cabal configuration (macOS)
       if: ${{ runner.os == 'macOS' }}
       run: |
@@ -106,13 +106,16 @@ jobs:
 
     - name: Install the icu4u library (Windows)
       if: ${{ runner.os == 'Windows' }}
-      working-directory: ${HOME}
       run: |
+        cd /c/
         curl -Lo icu4c.zip https://github.com/unicode-org/icu/releases/download/release-67-1/icu4c-67_1-Win64-MSVC2017.zip
         7z e icu4c.zip -oicu4c
 
+        mkdir -p /c/icu4c/include/unicode
+
         echo "extra-lib-dirs: ${ICU_DIR_WIN}">> ${APPDATA}/cabal/config
         echo "extra-include-dirs: ${ICU_DIR_WIN}\inlucde" >> ${APPDATA}/cabal/config
+
         ls -R ${HOME}/icu4c
 
         cabal install text-icu --lib
