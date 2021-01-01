@@ -61,7 +61,7 @@ jobs:
       id: vars
       run: |
         sha=`echo $(git rev-parse --short=7 HEAD)`
-        nightly=`echo Agda-nightly-${sha}`
+        nightly=`echo Agda-nightly`
 
         echo ::set-output name=sha::${sha}
         echo ::set-output name=nightly::${nightly}
@@ -92,10 +92,10 @@ jobs:
     - name: Display build variables
       run: |
         echo nightly=${{ steps.vars.outputs.nightly }}
-        echo ${{ steps.vars.outputs.compress-cmd }}
-        echo ${{ steps.vars.outputs.filename }}
-        echo ${{ steps.vars.outputs.content-type }}
-        echo ${{ steps.vars.outputs.args }}
+        echo compress-cmd=${{ steps.vars.outputs.compress-cmd }}
+        echo filename=${{ steps.vars.outputs.filename }}
+        echo content-type=${{ steps.vars.outputs.content-type }}
+        echo args=${{ steps.vars.outputs.args }}
 
     - uses: haskell/actions/setup@v1
       id: setup-haskell
