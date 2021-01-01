@@ -108,6 +108,7 @@ jobs:
       if: ${{ runner.os == 'Windows' }}
       working-directory: /c/
       run: |
+        set -x
         curl -Lo icu4c.zip https://github.com/unicode-org/icu/releases/download/release-67-1/icu4c-67_1-Win64-MSVC2017.zip
         7z e icu4c.zip -oicu4c
         mkdir -p icu4c/include/unicode
