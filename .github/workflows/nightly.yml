@@ -168,8 +168,11 @@ jobs:
             mkdir ${{ steps.vars.outputs.nightly }}/dylib
             cp /usr/local/opt/icu4c/lib/libicuuc.67.dylib /usr/local/opt/icu4c/lib/libicui18n.67.dylib ${{ steps.vars.outputs.nightly }}/dylib
             otool -l ${{ steps.vars.outputs.nightly }}/bin/agda
-            otool -l ${{ steps.vars.outputs.nightly }}/dylib/libicui18n.67.dylib
-            otool -l ${{ steps.vars.outputs.nightly }}/dylib/libicuuc.67.dylib
+            install_name_tool -id @rpath/libicui18n.67.dylib ${{ steps.vars.outputs.nightly }}/dylib/libicui18n.67.dylib
+            install_name_tool -id @rpath/libicuuc.67.dylib ${{ steps.vars.outputs.nightly }}/dylib/libicuuc.67.dylib
+            install_name_tool -change /usr/local/opt/icu4c/lib/libicuuc.67.dylib @rpath/libicuuc.67.dylib ${{ steps.vars.outputs.nightly }}/bin/agda
+            install_name_tool -change /usr/local/opt/icu4c/lib/libicui18n.67.dylib @rpath/libicui18n.67.dylib ${{ steps.vars.outputs.nightly }}/bin/agda
+            otool -L ${{ steps.vars.outputs.nightly }}/bin/agda
           fi
         fi
 
