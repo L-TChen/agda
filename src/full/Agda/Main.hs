@@ -396,8 +396,8 @@ printVersion backends PrintAgdaVersion = do
   bullet = (" - " ++)
   -- Print cabal flags that were involved in compilation.
   flags =
-#ifdef VERSION_WITH_HASH
-    "version-with-hash: suffix version information with the Git commit hash" :
+#ifdef VERSION_WITH_GIT_HASH
+    "version-with-git-hash: suffix version information with the Git commit hash" :
 #endif
 #ifdef COUNT_CLUSTERS
     "enable-cluster-counting: unicode cluster counting in LaTeX backend using the ICU library" :

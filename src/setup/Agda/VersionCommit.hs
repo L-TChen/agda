@@ -7,7 +7,7 @@
 
 module Agda.VersionCommit where
 
-#ifdef VERSION_WITH_HASH
+#ifdef VERSION_WITH_GIT_HASH
 import Development.GitRev
 #endif
 
@@ -19,7 +19,7 @@ versionWithCommitInfo = version ++ maybe "" ("-" ++) commitInfo
 
 -- | Information about current git commit, generated at compile time.
 commitInfo :: Maybe String
-#ifdef VERSION_WITH_HASH
+#ifdef VERSION_WITH_GIT_HASH
 commitInfo
   | hash == "UNKNOWN" = Nothing
   | otherwise         = Just $ abbrev hash ++ dirty

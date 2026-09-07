@@ -8,8 +8,8 @@ Installation
 
 * Agda supports GHC versions 9.2.8 to 9.14.1.
 
-* The new Cabal flag `version-with-hash` controls whether version information
-  is suffixed with the Git commit hash. It is disabled by default for cabal 
+* The new Cabal flag `version-with-git-hash` controls whether version information
+  is suffixed with the Git commit hash. It is disabled by default for cabal
   but enabled by default when using the Makefile.
 
 Pragmas and options

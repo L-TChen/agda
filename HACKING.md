@@ -120,7 +120,7 @@ When building Agda the following Cabal flags can be used:
     This should *not* be enabled in declarative build environments like Nix or Guix.
     Default: off.
 
-* `version-with-hash`
+* `version-with-git-hash`
 
     Suffix version information with the Git commit hash when available.
     A `-dirty` marker is also included if tracked files have uncommitted changes.
