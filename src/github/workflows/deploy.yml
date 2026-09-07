@@ -47,9 +47,9 @@ jobs:
       # ASR (2022-06-01): The flag `--enable-split-sections` generates the warning
       # "-split-sections is not useful on this platform since it always uses subsections via symbols"
       # on MacOS (Issue #5940).
-      LINUX_ARGS: "--flags=optimise-heavily --enable-executable-static  --enable-split-sections"
-      MACOS_ARGS: "--flags=optimise-heavily"
-      WIN64_ARGS: "--flags=optimise-heavily --enable-split-sections"
+      LINUX_ARGS: "--flags=optimise-heavily --flags=version-with-git-hash --enable-executable-static  --enable-split-sections"
+      MACOS_ARGS: "--flags=optimise-heavily --flags=version-with-git-hash"
+      WIN64_ARGS: "--flags=optimise-heavily --flags=version-with-git-hash --enable-split-sections"
 
     runs-on: ${{ matrix.os }}
     steps:
