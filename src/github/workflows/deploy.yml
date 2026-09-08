@@ -210,7 +210,7 @@ jobs:
     - name: Configure the build plan
       if: ${{ runner.os != 'Linux' }}
       run: |
-        cabal configure ${{ steps.vars.outputs.args }}
+        cabal configure ${{ steps.vars.outputs.args }} --constraint='zlib +bundled-c-zlib'
         cabal build --dry-run
       # cabal build --dry-run creates dist-newstyle/cache/plan.json
 
@@ -228,7 +228,7 @@ jobs:
       shell: "alpine.sh {0}"
       run: |
         cabal update # Liang-Ting (2024-01-26): Alpine Linux has its own GHC toolchain
-        cabal configure ${{ steps.vars.outputs.args }}
+        cabal configure ${{ steps.vars.outputs.args }} --constraint='zlib +bundled-c-zlib'
         cabal build --only-dependencies
 
     - name: Build dependencies
@@ -258,7 +258,23 @@ jobs:
         exe=$(basename "${exepath}")
         cp "${exepath}" "${bindist}/"
         strip "${bindist}/${exe}"
-        file "${bindist}/agda"
+        file "${bindist}/${exe}"
+
+    - name: Display dynamic library dependencies
+      run: |
+        exe="${{ steps.vars.outputs.bindist }}/${{ steps.vars.outputs.exe }}"
+        case "${{ runner.os }}" in
+          macOS)
+            otool -L "${exe}"
+            ;;
+          Windows)
+            objdump -p "${exe}" | awk '/DLL Name:/ { print }'
+            ;;
+          Linux)
+            # Unlike ldd, readelf also succeeds for a fully static executable.
+            readelf -d "${exe}"
+            ;;
+        esac
 
     - name: Pack artefacts
       run: |
