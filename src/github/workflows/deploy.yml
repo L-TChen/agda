@@ -39,7 +39,7 @@ jobs:
         cabal-ver: [latest]
 
     env:
-      ARGS: "--disable-executable-profiling --disable-library-profiling --flags=use-xdg-data-home"
+      ARGS: "--disable-executable-profiling --disable-library-profiling --flags=use-xdg-data-home --constraint='zlib +bundled-c-zlib'"
       # Liang-Ting Chen (2021-01-01):
       # Cabal cannot compile statically with text-icu (required by the flag `enable-cluster-counting`),
       # see https://github.com/4e6/text-icu-static-example
@@ -210,7 +210,7 @@ jobs:
     - name: Configure the build plan
       if: ${{ runner.os != 'Linux' }}
       run: |
-        cabal configure ${{ steps.vars.outputs.args }} --constraint='zlib +bundled-c-zlib'
+        cabal configure ${{ steps.vars.outputs.args }}
         cabal build --dry-run
       # cabal build --dry-run creates dist-newstyle/cache/plan.json
 
@@ -228,7 +228,7 @@ jobs:
       shell: "alpine.sh {0}"
       run: |
         cabal update # Liang-Ting (2024-01-26): Alpine Linux has its own GHC toolchain
-        cabal configure ${{ steps.vars.outputs.args }} --constraint='zlib +bundled-c-zlib'
+        cabal configure ${{ steps.vars.outputs.args }}
         cabal build --only-dependencies
 
     - name: Build dependencies
