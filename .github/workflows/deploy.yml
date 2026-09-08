@@ -149,21 +149,6 @@ jobs:
         cp "${exepath}" "${bindist}/"
         strip "${bindist}/${exe}"
         file "${bindist}/${exe}"
-    - name: Display dynamic library dependencies
-      run: |
-        exe="${{ steps.vars.outputs.bindist }}/${{ steps.vars.outputs.exe }}"
-        case "${{ runner.os }}" in
-          macOS)
-            otool -L "${exe}"
-            ;;
-          Windows)
-            objdump -p "${exe}" | awk '/DLL Name:/ { print }'
-            ;;
-          Linux)
-            # Unlike ldd, readelf also succeeds for a fully static executable.
-            readelf -d "${exe}"
-            ;;
-        esac
     - name: Pack artefacts
       run: |
         ${{ steps.vars.outputs.compress_cmd }}
@@ -270,6 +255,26 @@ jobs:
     - name: Unpack artifacts
       run: |
         ${{ steps.vars.outputs.decompress_cmd }}
+    - if: ${{ runner.os == 'Windows' }}
+      name: Install dependency inspection tools (Windows)
+      run: |
+        $env:PATH = "C:\msys64\usr\bin;$env:PATH"
+        pacman -v --noconfirm -S --needed mingw-w64-x86_64-binutils
+      shell: pwsh
+    - name: Display dynamic library dependencies
+      run: |
+        case "${{ runner.os }}" in
+          macOS)
+            otool -L ./agda
+            ;;
+          Windows)
+            /c/msys64/mingw64/bin/objdump.exe -p ./agda.exe | awk '/DLL Name:/ { print }'
+            ;;
+          Linux)
+            # Unlike ldd, readelf also succeeds for a fully static executable.
+            readelf -d ./agda
+            ;;
+        esac
     - name: Run `agda --setup`
       run: |
         if [[ "${{ runner.os }}" == macOS ]]; then
