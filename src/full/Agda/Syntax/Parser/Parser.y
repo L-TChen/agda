@@ -845,35 +845,40 @@ TypedBinding :: { TypedBinding }
 TypedBinding
     : '(' Open ')'               { TLet (getRange ($1,$3)) (singleton $2) }
     | '(' 'let' Declarations ')' { TLet (getRange ($1,$4)) $3 }
+    | TypedBindingNoLet(TBind, ModalTBind) { $1 }
+
+-- A shared typed binder can also occur in a function signature head.
+-- Its interpretation there is deferred to exprToLHS.
+TypedBindingNoLet(bind, modalBind)
 
 -- relevant
-    | '(' TBindWithHiding ')' { setRange (getRange ($1,$2,$3)) $ $2 }
-    | '{' TBind '}'           { setRange (getRange ($1,$2,$3)) $ hide $2 }
-    | "{{" TBind "}}"         { setRange (getRange ($1,$2,$3)) $ makeInstance $2 }
+    : '(' TBindWithHiding ')' { setRange (getRange ($1,$2,$3)) $ $2 }
+    | '{' bind '}'           { setRange (getRange ($1,$2,$3)) $ hide $2 }
+    | "{{" bind "}}"         { setRange (getRange ($1,$2,$3)) $ makeInstance $2 }
 
 -- irrelevant
     | '.' '(' TBindWithHiding ')' { setRange (getRange ($2,$3,$4)) $ makeIrrelevant $1 $3 }
-    | '.' '{' TBind '}'           { setRange (getRange ($2,$3,$4)) $ hide $ makeIrrelevant $1 $3 }
-    | '.' "{{" TBind "}}"         { setRange (getRange ($2,$3,$4)) $ makeInstance $ makeIrrelevant $1 $3 }
+    | '.' '{' bind '}'           { setRange (getRange ($2,$3,$4)) $ hide $ makeIrrelevant $1 $3 }
+    | '.' "{{" bind "}}"         { setRange (getRange ($2,$3,$4)) $ makeInstance $ makeIrrelevant $1 $3 }
 
 -- shape-irrelevant
     | '..' '(' TBindWithHiding ')' { setRange (getRange ($2,$3,$4)) $ makeShapeIrrelevant $1 $3 }
-    | '..' '{' TBind '}'           { setRange (getRange ($2,$3,$4)) $ hide $ makeShapeIrrelevant $1 $3 }
-    | '..' "{{" TBind "}}"         { setRange (getRange ($2,$3,$4)) $ makeInstance $ makeShapeIrrelevant $1 $3 }
+    | '..' '{' bind '}'           { setRange (getRange ($2,$3,$4)) $ hide $ makeShapeIrrelevant $1 $3 }
+    | '..' "{{" bind "}}"         { setRange (getRange ($2,$3,$4)) $ makeInstance $ makeShapeIrrelevant $1 $3 }
 
 -- attributes, relevant
     | '(' ModalTBindWithHiding ')' { setRange (getRange ($1,$2,$3)) $ $2 }
-    | "{{" ModalTBind "}}"         { setRange (getRange ($1,$2,$3)) $ makeInstance $2 }
-    | '{' ModalTBind '}'           { setRange (getRange ($1,$2,$3)) $ hide $2 }
+    | "{{" modalBind "}}"         { setRange (getRange ($1,$2,$3)) $ makeInstance $2 }
+    | '{' modalBind '}'           { setRange (getRange ($1,$2,$3)) $ hide $2 }
 
 -- attributes, irrelevant
     | '.' '(' ModalTBindWithHiding ')' {% setRange (getRange ($2,$3,$4)) <\$> makeIrrelevantM $1 $3 }
-    | '.' '{' ModalTBind '}'           {% setRange (getRange ($2,$3,$4)) . hide <\$> makeIrrelevantM $1 $3 }
-    | '.' "{{" ModalTBind "}}"         {% setRange (getRange ($2,$3,$4)) . makeInstance <\$> makeIrrelevantM $1 $3 }
+    | '.' '{' modalBind '}'           {% setRange (getRange ($2,$3,$4)) . hide <\$> makeIrrelevantM $1 $3 }
+    | '.' "{{" modalBind "}}"         {% setRange (getRange ($2,$3,$4)) . makeInstance <\$> makeIrrelevantM $1 $3 }
 -- attributes, shape-irrelevant
     | '..' '(' ModalTBindWithHiding ')' {% setRange (getRange ($2,$3,$4)) <\$> makeShapeIrrelevantM $1 $3 }
-    | '..' '{' ModalTBind '}'           {% setRange (getRange ($2,$3,$4)) . hide <\$> makeShapeIrrelevantM $1 $3 }
-    | '..' "{{" ModalTBind "}}"         {% setRange (getRange ($2,$3,$4)) . makeInstance <\$> makeShapeIrrelevantM $1 $3 }
+    | '..' '{' modalBind '}'           {% setRange (getRange ($2,$3,$4)) . hide <\$> makeShapeIrrelevantM $1 $3 }
+    | '..' "{{" modalBind "}}"         {% setRange (getRange ($2,$3,$4)) . makeInstance <\$> makeShapeIrrelevantM $1 $3 }
 
 
 -- x1 .. xn : A
