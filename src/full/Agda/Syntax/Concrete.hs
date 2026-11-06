@@ -180,6 +180,7 @@ data Expr
                                                --   The 'KwRange' is for the @record@ keyword.
   | Let Range (List1 Declaration) (Maybe Expr) -- ^ ex: @let Ds in e@, missing body when parsing do-notation let
   | Paren Range Expr                           -- ^ ex: @(e)@
+  | TypedBindingExpr TypedBinding              -- ^ only parsed in function declaration heads
   | IdiomBrackets Range (Maybe QName) [Expr]   -- ^ ex: @(| e1 | e2 | .. | en |)@ or @(|)@
   | DoBlock KwRange (Maybe QName) (List1 DoStmt)
     -- ^ ex: @do x <- m1; m2@
@@ -542,6 +543,11 @@ data Declaration
   = TypeSig ArgInfo TacticAttribute Name Expr
       -- ^ Axioms and functions can be irrelevant. ('Hiding' should be 'NotHidden')
       --   'TacticAttribute' makes only sense in 'Generalize' blocks.
+  | FunSigP ArgInfo TacticAttribute Name Parameters Expr
+      -- ^ Function type signature with definition parameters.
+      --   Kept separate from 'TypeSig' as a minimal extension:
+      --   'TypeSig' remains the generic plain-signature node reused by
+      --   axiom-like blocks, while 'FunSigP' marks the new function-only syntax.
   | FieldSig IsInstance TacticAttribute Name (Arg Expr)
   | Generalize KwRange [TypeSignature] -- ^ Variables to be generalized, can be hidden and/or irrelevant.
   | Field KwRange [FieldSignature]
@@ -616,6 +622,7 @@ isPragma = \case
     Record _ _ _ _ _ _ _    -> empty
     RecordDef _ _ _ _ _     -> empty
     TypeSig _ _ _ _         -> empty
+    FunSigP _ _ _ _ _       -> empty
     FieldSig _ _ _ _        -> empty
     Generalize _ _          -> empty
     Field _ _               -> empty
@@ -829,6 +836,7 @@ returnExpr (Pi _ e)        = returnExpr e
 returnExpr (Fun _ _  e)    = returnExpr e
 returnExpr (Let _ _ e)     = returnExpr =<< e
 returnExpr (Paren _ e)     = returnExpr e
+returnExpr TypedBindingExpr{} = Nothing
 returnExpr (Generalized e) = returnExpr e
 returnExpr e               = pure e
 
@@ -855,6 +863,7 @@ exprToPattern fallback = loop
     Ident       x        -> pure $ IdentP True x
     App         _ e1 e2  -> AppP <$> loop e1 <*> traverse (traverse loop) e2
     Paren       r e      -> ParenP r <$> loop e
+    e@TypedBindingExpr{} -> fallback e
     Underscore  r _      -> pure $ WildP r
     Absurd      r        -> pure $ AbsurdP r
     As          r x e    -> pushUnderBracesP r (AsP r x) <$> loop e
@@ -990,6 +999,7 @@ instance HasRange Expr where
       Pi b e                 -> fuseRange b e
       Let r _ _              -> r
       Paren r _              -> r
+      TypedBindingExpr b     -> getRange b
       IdiomBrackets r _ _    -> r
       DoBlock r q ds         -> getRange (r, q, ds)
       As r _ _               -> r
@@ -1056,6 +1066,7 @@ instance HasRange RecordDirective where
 
 instance HasRange Declaration where
   getRange (TypeSig _ _ x t)       = fuseRange x t
+  getRange (FunSigP ai _ x ps t)   = ai `fuseRange` x `fuseRange` ps `fuseRange` t
   getRange (FieldSig _ _ x t)      = fuseRange x t
   getRange (Field kwr ds)          = fuseRange kwr ds
   getRange (FunClause ai lhs rhs wh _) = ai `fuseRange` lhs `fuseRange` rhs `fuseRange` wh
@@ -1215,6 +1226,7 @@ instance KillRange RecordDirective where
 
 instance KillRange Declaration where
   killRange (TypeSig ai t n e)      = killRangeN TypeSig ai t n e
+  killRange (FunSigP ai t n ps e)   = killRangeN FunSigP ai t n ps e
   killRange (FieldSig i t n e)      = killRangeN FieldSig i t n e
   killRange (Generalize r ds )      = killRangeN (Generalize empty) ds
   killRange (Field r fs)            = killRangeN (Field empty) fs
@@ -1272,6 +1284,7 @@ instance KillRange Expr where
   killRange (RecUpdate _ _ e ne)      = killRangeN (RecUpdate empty noRange) e ne
   killRange (Let _ d e)               = killRangeN (Let noRange) d e
   killRange (Paren _ e)               = killRangeN (Paren noRange) e
+  killRange (TypedBindingExpr b)      = killRangeN TypedBindingExpr b
   killRange (IdiomBrackets _ q es)    = killRangeN (IdiomBrackets noRange) q es
   killRange (DoBlock _ q ss)          = killRangeN (DoBlock empty) q ss
   killRange (Absurd _)                = Absurd noRange
@@ -1396,6 +1409,7 @@ instance NFData Expr where
   rnf (RecUpdate _ _ a b)      = rnf a `seq` rnf b
   rnf (Let _ a b)              = rnf a `seq` rnf b
   rnf (Paren _ a)              = rnf a
+  rnf (TypedBindingExpr a)     = rnf a
   rnf (IdiomBrackets _ a b)    = rnf a `seq` rnf b
   rnf (DoBlock _ a b)          = rnf a `seq` rnf b
   rnf (Absurd _)               = ()
@@ -1445,6 +1459,7 @@ instance NFData RecordDirective where
 
 instance NFData Declaration where
   rnf (TypeSig a b c d)       = rnf a `seq` rnf b `seq` rnf c `seq` rnf d
+  rnf (FunSigP a b c d e)     = rnf a `seq` rnf b `seq` rnf c `seq` rnf d `seq` rnf e
   rnf (FieldSig a b c d)      = rnf a `seq` rnf b `seq` rnf c `seq` rnf d
   rnf (Generalize _ a)        = rnf a
   rnf (Field _ fs)            = rnf fs

@@ -173,6 +173,7 @@ instance Pretty Expr where
                     , maybe empty (\ e -> hlKeyword "in" <+> pretty e) me
                     ]
             Paren _ e -> parens $ pretty e
+            TypedBindingExpr b -> pretty b
             IdiomBrackets _ q es -> qualifier q case es of
                 []   -> emptyIdiomBrkt
                 [e]  -> leftIdiomBrkt <+> pretty e <+> rightIdiomBrkt
@@ -384,6 +385,12 @@ instance Pretty Declaration where
     TypeSig i tac x e ->
       sep [ prettyTactic' tac $ prettyRelevance i $ prettyCohesion i $
               prettyQuantity i $ prettyPolarity i $ pretty x <+> colon
+          , nest 2 $ pretty e
+          ]
+    FunSigP i tac x ps e ->
+      sep [ prettyTactic' tac $
+              prettyRelevance i $ prettyCohesion i $ prettyQuantity i $ prettyPolarity i $
+                fsep (pretty x : map pretty ps) <+> colon
           , nest 2 $ pretty e
           ]
     FieldSig inst tac x (Arg i e) ->
