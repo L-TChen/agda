@@ -63,6 +63,73 @@ By default, Agda checks the following properties of a function definition:
 - The function should be terminating on all possible inputs, see
   :ref:`termination-checking`.
 
+.. _function-definition-parameters:
+
+Definition parameters
+=====================
+
+.. versionadded:: 2.10.0
+
+A function signature can introduce *parameters* before the colon. Their
+names are in scope in the remaining signature and in every defining clause,
+including its ``where`` declarations:
+::
+
+  identity {A : Set} : A → A
+  identity x = x
+
+  constant (A : Set) (x : A) : A
+  constant = x
+
+These functions have types ``{A : Set} → A → A`` and
+``(A : Set) → A → A``, respectively. Parameters are ordinary arguments at
+call sites, but they are omitted from the left-hand sides of defining
+clauses. Patterns in those clauses match only the arguments after the
+colon. Parameters cannot themselves be matched in the clause's left-hand
+side or selected for interactive case splitting.
+
+Visible, hidden, and instance parameters are supported, together with
+ordinary binder annotations and named hidden binders. Parameter names must
+be distinct, except that anonymous ``_`` binders can be repeated. Patterns
+and ``let`` or ``open`` declarations cannot be used as parameter binders.
+
+Named hidden binders can use a different name at call sites from the name
+in scope in the definition. Here ``B`` labels the argument at call sites,
+while ``A`` is bound in the signature and clauses:
+::
+
+  identity-named {B = A : Set} : A → A
+  identity-named x = x
+
+  named-use : Nat
+  named-use = identity-named {B = Nat} zero
+
+At least one parameter must have an explicit type annotation. This
+distinguishes parameterised signatures from existing multiple signatures
+such as ``f g : Nat → Nat``. Other parameter types can be inferred:
+::
+
+  identity′ {a} (A : Set a) : A → A
+  identity′ x = x
+
+Generalisable variables cannot occur in parameter types: introduce them
+explicitly, as with ``a`` above. Generalisation in the type after the colon
+is still supported; its variables are quantified after the parameters and
+do not become available by name in the function body.
+
+Recursive calls follow the same argument-passing rules as other calls.
+They can supply different parameter values; explicit parameters must be
+supplied, and hidden parameters are inferred as usual:
+::
+
+  repeat (n : Nat) : Nat → Nat
+  repeat zero    = n
+  repeat (suc k) = repeat (suc n) k
+
+Definition parameters can also be used in mutual blocks, ``where`` blocks,
+and ``let`` definitions, subject to the usual restrictions of those
+contexts. This syntax is not supported in ``postulate`` or ``field`` blocks.
+
 Special patterns
 ================
 

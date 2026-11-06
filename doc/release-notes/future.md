@@ -1,6 +1,24 @@
 NOTE: Put drafts of release notes here that might be included in some
 future release.
 
+Language
+--------
+
+* Function signatures can introduce definition parameters before the colon:
+
+  ```agda
+  id {A : Set} : A → A
+  id x = x
+  ```
+
+  Parameters scope over the signature and clauses, and are omitted from
+  clause left-hand sides. Calls, including recursive calls, pass them as
+  ordinary arguments. At least one parameter must have a type annotation;
+  generalisable variables in parameter types must be bound explicitly.
+  Postulate and field declarations do not support this syntax.
+
+  See [#6962](https://github.com/agda/agda/issues/6962).
+
 Pragmas and Options
 -------------------
 
