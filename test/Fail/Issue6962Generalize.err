@@ -1,0 +1,3 @@
+Issue6962Generalize.agda:5.12-13: error: [GeneralizeNotSupportedHere]
+Generalizable variable Issue6962Generalize.a is not supported here
+when scope checking a

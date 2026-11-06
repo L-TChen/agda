@@ -1,0 +1,2 @@
+Issue6962Missing.agda:4.1-2: error: [MissingDefinitions]
+The following names are declared but lack a definition: f

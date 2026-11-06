@@ -1,0 +1,6 @@
+Issue6962ResultScope.agda:8.14-15: error: [UnequalTypes]
+The type
+  B
+is not a subtype of
+  B₁
+when checking that the expression x has type B₁

@@ -1,0 +1,4 @@
+Issue6962NestedGeneralize.agda:7.20-21: error: [GeneralizeNotSupportedHere]
+Generalizable variable Issue6962NestedGeneralize.A is not supported
+here
+when scope checking A

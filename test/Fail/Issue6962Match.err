@@ -1,0 +1,5 @@
+Issue6962Match.agda:5.8-12: error: [CannotEliminateWithPattern]
+Cannot eliminate type Nat with constructor pattern {n = zero} (it
+is not a function type; did you supply too many arguments?)
+when checking the clause left hand side
+f {n = zero}
