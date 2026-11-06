@@ -388,6 +388,28 @@ exprAsNameOrHiddenNames = \case
   e ->
     singleton . defaultNamedArg <$> exprAsNameAndPattern e
 
+-- | Share the syntax of named arguments with named binders, so that a
+-- declaration head need not choose between them before the closing brace.
+headBoundNames :: Either (List1 (NamedArg Binder)) (List1 Expr) -> Parser (List1 (NamedArg Binder))
+headBoundNames = \case
+  Left xs -> pure xs
+  Right es -> parseErrorRange es "Expected definition parameter names"
+
+exprToBoundNamesOrAbsurd :: Expr -> Parser (Either (List1 (NamedArg Binder)) (List1 Expr))
+exprToBoundNamesOrAbsurd = \case
+  Equal _ e1 e2 -> do
+    x <- case e1 of
+      Ident q        -> pure $ Just q
+      Underscore{}   -> pure Nothing
+      _ -> parseErrorRange e1 "Not a valid binder name"
+    y <- case e2 of
+      Ident q        -> pure $ Left q
+      Underscore r _ -> pure $ Right r
+      _ -> parseErrorRange e2 "Not a valid bound identifier"
+    Left . singleton . updateNamedArg mkBinder <$> mkNamedArg x y
+  RawApp _ es -> boundNamesOrAbsurd $ List2.toList1 es
+  e -> boundNamesOrAbsurd $ singleton e
+
 boundNamesOrAbsurd :: List1 Expr -> Parser (Either (List1 (NamedArg Binder)) (List1 Expr))
 boundNamesOrAbsurd es
   | any isAbsurd es = return $ Right es
@@ -490,9 +512,71 @@ buildDoStmt e cs = defaultBuildDoStmt e cs
     Patterns
  --------------------------------------------------------------------------}
 
--- | Turn an expression into a left hand side.
-exprToLHS :: Expr -> Parser ([RewriteEqn] -> [WithExpr] -> LHS)
-exprToLHS e = LHS <$> exprToPattern e
+-- | A declaration head is disambiguated before converting it to patterns.
+-- Typed binders select definition parameters; all other heads retain the
+-- ordinary pattern/type-signature interpretation (issue #6962).
+data ParsedLHS
+  = PatternLHS Pattern
+  | ParameterLHS (Arg Name) Parameters
+
+exprToLHS :: Expr -> Parser ParsedLHS
+exprToLHS e
+  | RawApp _ es <- e
+  , hd : args <- List2.toList es
+  , any isTyped args = do
+      name <- headName hd
+      ps <- concat <$> mapM parameter args
+      let names = [ boundName $ binderName $ namedArg x
+                  | p <- ps, x <- binders p
+                  , not $ isNoName $ boundName $ binderName $ namedArg x ]
+      case names List.\\ List.nub names of
+        x : _ -> parseErrorRange x $ "Duplicate definition parameter: " ++ prettyShow x
+        []    -> pure $ ParameterLHS name ps
+  | otherwise = PatternLHS <$> exprToPattern e
+  where
+    isTyped TypedBindingExpr{} = True
+    isTyped _                  = False
+
+    headName = \case
+      Ident (QName x) -> pure $ defaultArg x
+      Dot r (Ident (QName x)) -> pure $ makeIrrelevant r $ defaultArg x
+      x -> parseErrorRange x "Expected an unqualified function name before definition parameters"
+
+    parameter = \case
+      TypedBindingExpr b@(TBind _ xs _) -> do
+        mapM_ checkBinder xs
+        pure [DomainFull b]
+      TypedBindingExpr b@TLet{} -> invalid b
+      e -> case untyped e of
+        Nothing -> invalid e
+        Just xs -> forM (List1.toList xs) $ \x -> do
+          let (n, p) = namedArg x
+          unless (isNothing p) $
+            parseErrorRange e "Patterns are not allowed in definition parameters"
+          pure $ DomainFree $ fmap (fmap $ const $ mkBinder_ n) x
+
+    -- Reuse lambda-binder recognition, but disallow pattern bindings below.
+    untyped = \case
+      Dot r e -> fmap (makeIrrelevant r) <$> untyped e
+      DoubleDot r e -> fmap (makeShapeIrrelevant r) <$> untyped e
+      HiddenArg _ (Named (Just n) e) -> namedBinder Hidden n e
+      InstanceArg _ (Named (Just n) e) -> namedBinder (Instance NoOverlap) n e
+      e -> exprAsNameOrHiddenNames e
+
+    namedBinder h n e = do
+      (x, p) <- exprAsNameAndPattern e
+      pure $ singleton $ setHiding h $ defaultArg $
+        Named (Just n) (x, p)
+
+    checkBinder x = unless (isNothing $ binderPattern $ namedArg x) $
+      parseErrorRange x "Patterns are not allowed in definition parameters"
+
+    binders (DomainFree x) = [x]
+    binders (DomainFull (TBind _ xs _)) = List1.toList xs
+    binders (DomainFull TLet{}) = []
+
+    invalid :: (HasRange a, Pretty a) => a -> Parser b
+    invalid x = parseErrorRange x $ "Illegal definition parameter: " ++ prettyShow x
 
 -- | Turn an expression into a pattern. Fails if the expression is not a
 --   valid pattern.
@@ -619,13 +703,25 @@ patternToArgPattern = \case
    p -> defaultArg p
 
 
-funClauseOrTypeSigs :: [Attr] -> ([RewriteEqn] -> [WithExpr] -> LHS)
+funClauseOrTypeSigs :: [Attr] -> ParsedLHS
                     -> [Either RewriteEqn (List1 (Named Name Expr))]
                     -> RHSOrTypeSigs
                     -> WhereClause -> Parser (List1 Declaration)
-funClauseOrTypeSigs attrs lhs' with mrhs wh = do
+funClauseOrTypeSigs attrs (ParameterLHS (Arg info x) ps) with mrhs wh = do
+  case mrhs of
+    JustRHS{} -> parseErrorRange ps "Definition parameters are only allowed in type signatures"
+    TypeSigsRHS e -> do
+      case wh of
+        NoWhere -> pure ()
+        _ -> parseError "A type signature cannot have a where clause"
+      (rs, es) <- buildWithBlock with
+      unless (null rs) $ parseError "Illegal: rewrite in type signature"
+      unless (null es) $ parseError "Illegal: with in type signature"
+      info <- applyAttrs attrs info
+      pure $ singleton $ FunSigP info (getTacticAttr attrs) x ps (Generalized e)
+funClauseOrTypeSigs attrs (PatternLHS p) with mrhs wh = do
   (rs , es) <- buildWithBlock with
-  let lhs = lhs' rs (map (fmap observeModifiers) es)
+  let lhs = LHS p rs (map (fmap observeModifiers) es)
   -- traceShowM lhs
   case mrhs of
     JustRHS rhs   -> do

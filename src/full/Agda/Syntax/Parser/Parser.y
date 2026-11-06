@@ -86,20 +86,26 @@ import Agda.Utils.Impossible
 %lexer { lexer } { TokEOF{} }
 
 %expect 8
--- * shift/reduce for \ x y z -> foo = bar
---   shifting means it'll parse as \ x y z -> (foo = bar) rather than
---   (\ x y z -> foo) = bar
+-- The declaration-head bridge below adds no conflicts. These are the same
+-- eight shift/reduce conflicts as in the original grammar:
 --
--- * Telescope let and do-notation let.
+-- * Telescope let and do-notation let (one conflict).
 --      Expr2 -> 'let' Declarations . LetBody
 --      TypedBinding -> '(' 'let' Declarations . ')'
---        ')'   shift, and enter state 486
---              (reduce using rule 189)
 --   A do-block cannot end in a 'let' so committing to TypedBinding with a
 --   shift is the right thing to do here.
 --
--- * Named implicits in TypedBinding {x = y}. When encountering the '=' shift
---   treats this as a named implicit and reducing would fail later.
+-- * Named implicits in ordinary TypedBinding {x = y} (two conflicts,
+--   for a name or '_' before '='): shift '=' to
+--   select the named binder. Declaration heads instead share the prefix
+--   Expr1 '=' Expr with named arguments, so ':' or '}' can disambiguate them.
+--
+-- * A record field assignment: shift '=' after its name (one conflict).
+--
+-- * Instance module applications M {{...}}, including 'open M {{...}}':
+--   shift the closing braces to select the module application instead of
+--   reducing '...' to an expression (four conflicts, for the two forms
+--   of closing double braces).
 
 -- This is a trick to get rid of shift/reduce conflicts arising because we want
 -- to parse things like "m >>= \x -> k x". See the Expr rule for more
@@ -1170,10 +1176,52 @@ CommaImportNames1
     Function clauses
  --------------------------------------------------------------------------}
 
--- A left hand side of a function clause. We parse it as an expression, and
--- then check that it is a valid left hand side.
-LHS :: { [RewriteEqn] -> [WithExpr] -> LHS }
-LHS : Expr1 {% exprToLHS $1 }
+-- Use the same prefix as Expr4 for named binders, so ':' or '}' can
+-- distinguish {B = A : Set} from the ordinary named argument {B = A}.
+-- Untyped binder lists use Application to retain the treatment of attributes.
+HeadTBind :: { TypedBinding }
+HeadTBind
+  : Application ':' Expr {% do
+      xs <- exprToBoundNamesOrAbsurd (rawApp $1) >>= headBoundNames
+      pure $ TBind (getRange ($1,$2,$3)) xs $3 }
+  | Expr1 '=' Expr ':' Expr {% do
+      xs <- exprToBoundNamesOrAbsurd (Equal (getRange ($1,$2,$3)) $1 $3) >>= headBoundNames
+      pure $ TBind (getRange ($1,$2,$3,$4,$5)) xs $5 }
+
+ModalHeadTBind :: { TypedBinding }
+ModalHeadTBind : Attributes1 HeadTBind {% do
+  case $2 of
+    TBind r xs t -> do
+      xs <- applyAttributes $1 defaultArgInfo xs
+      pure $ TBind r xs t
+    TLet{} -> __IMPOSSIBLE__ }
+
+-- Parse a permissive expression spine, then let exprToLHS distinguish
+-- ordinary patterns from definition parameters. Only the outer LHS admits
+-- typed binders: nested expressions and telescope arrows use the unchanged
+-- expression grammar. Keep Expr2 as the final application element, just as
+-- Application does, to preserve existing diagnostics for invalid patterns.
+LHS :: { ParsedLHS }
+LHS
+  : LHSApplication {% exprToLHS $ rawApp $1 }
+  | LHSApplication3 '|' UnnamedWithExprs
+      {% exprToLHS $ WithApp (getRange ($1,$3)) (rawApp $1) $3 }
+
+LHSApplication :: { List1 Expr }
+LHSApplication
+  : Expr2 { singleton $1 }
+  | TypedBindingNoLet(HeadTBind, ModalHeadTBind) { singleton $ TypedBindingExpr $1 }
+  | LHSAtom LHSApplication { $1 <| $2 }
+
+LHSApplication3 :: { List1 Expr }
+LHSApplication3
+  : LHSAtom { singleton $1 }
+  | LHSAtom LHSApplication3 { $1 <| $2 }
+
+LHSAtom :: { Expr }
+LHSAtom
+  : Expr3 { $1 }
+  | TypedBindingNoLet(HeadTBind, ModalHeadTBind) { TypedBindingExpr $1 }
 
 -- Parsing either an expression @e@ or a @(rewrite | with p <-) e1 | ... | en@.
 HoleContent :: { HoleContent }
